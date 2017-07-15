@@ -1,9 +1,5 @@
 #include <swin/SWin.h>
-#ifdef __APPLE__
-#include <OpenGL/gl.h>
-#else
-//#include <GL/GL.h>
-#endif
+#include "glad/glad.h"
 #include <stdio.h>
 
 void buttonCallback(void* userData) {
@@ -29,10 +25,15 @@ int main(int argc, const char * argv[]) {
     
     swMakeContextCurrent(glView);
     
+    if(!gladLoadGL()) {
+        printf("Error loading OpenGL!\n");
+        return -1;
+    }
+    
     uint32_t frames = 0;
     uint32_t fps = 0;
     
-    //glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
+    glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
     
     while (!swCloseRequested(window)) {
         swPollEvents();
@@ -47,14 +48,14 @@ int main(int argc, const char * argv[]) {
             printf("%d\n", fps);
         }
         
-        //glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT);
         
-        //glColor3f(1.0f, 1.0f, 1.0f);
-        //glBegin(GL_TRIANGLES);
-        //glVertex2f(-0.5f, -0.5f);
-        //glVertex2f( 0.0f,  0.5f);
-        //glVertex2f( 0.5f, -0.5f);
-        //glEnd();
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glBegin(GL_TRIANGLES);
+        glVertex2f(-0.5f, -0.5f);
+        glVertex2f( 0.0f,  0.5f);
+        glVertex2f( 0.5f, -0.5f);
+        glEnd();
         
         swSwapBufers(glView);
         swDraw(window);
