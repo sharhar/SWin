@@ -1,4 +1,4 @@
-#include "SWin.h"
+#include <swin/SWin.h>
 #import <Foundation/Foundation.h>
 #import <Cocoa/Cocoa.h>
 #import <AppKit/NSApplication.h>
