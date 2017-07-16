@@ -11,23 +11,6 @@ typedef struct SWin_Win32_Time {
 	uint64_t frequency;
 } SWin_Win32_Time;
 
-SWin_Win32_Time __sWin_Win32_Time;
-uint32_t viewID;
-
-void swInit() {
-	uint64_t frequency;
-
-	if (QueryPerformanceFrequency((LARGE_INTEGER*)&frequency)) {
-		__sWin_Win32_Time.hasPC = 1;
-		__sWin_Win32_Time.frequency = frequency;
-	} else {
-		__sWin_Win32_Time.hasPC = 0;
-		__sWin_Win32_Time.frequency = 1000;
-	}
-
-	viewID = 1;
-}
-
 typedef struct SWin_Win32_Window {
 	HINSTANCE instance;
 	HWND hWnd;
@@ -42,6 +25,34 @@ typedef struct SWin_Win32_OpenGLView {
 	HPALETTE hPalette;
 	HWND hWnd;
 } SWin_Win32_OpenGLView;
+
+typedef void(*buttonCallback)(void*);
+
+typedef struct SWin_Win32_Button {
+	buttonCallback callback;
+	void* userPointer;
+	HWND hWnd;
+} SWin_Win32_Button;
+
+SWin_Win32_Time __sWin_Win32_Time;
+uint32_t viewID;
+
+void* userInfos;
+
+void swInit() {
+	uint64_t frequency;
+
+	if (QueryPerformanceFrequency((LARGE_INTEGER*)&frequency)) {
+		__sWin_Win32_Time.hasPC = 1;
+		__sWin_Win32_Time.frequency = frequency;
+	} else {
+		__sWin_Win32_Time.hasPC = 0;
+		__sWin_Win32_Time.frequency = 1000;
+	}
+
+	viewID = 1;
+	userInfos = malloc(sizeof(SWin_Win32_Button) * viewID);
+}
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
 	SWin_Win32_Window* window = malloc(sizeof(SWin_Win32_Window));
@@ -80,6 +91,14 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 		printf("Problem!\n");
 		return;
 	}
+
+	RECT contentSize;
+	contentSize.bottom = height;
+	contentSize.top = 0;
+	contentSize.left = 0;
+	contentSize.right = width;
+
+	AdjustWindowRectEx(&contentSize, WS_SYSMENU, FALSE, WS_EX_LAYERED);
 
 	ZeroMemory(&window->msg, sizeof(MSG));
 	window->close = 0;
@@ -160,10 +179,15 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
 		return;
 	}
 
+	RECT viewBounds;
+	GetClientRect(parent, &viewBounds);
+
+	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
+
 	view->hWnd = CreateWindowEx(0, TEXT(viewIDStr),
 		(LPCTSTR)NULL,
 		WS_CHILD | WS_BORDER | WS_VISIBLE,
-		bounds->x, bounds->y, bounds->width, bounds->height,
+		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
 		parent,
 		(HMENU)viewID,
 		GetWindowLong(parent, GWL_HINSTANCE),
@@ -210,26 +234,54 @@ void swSwapBufers(HWND view) {
 	SwapBuffers(glView->hDc);
 }
 
-SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData) {
+SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonCallback callback, void* userData) {
+	RECT viewBounds;
+	GetClientRect(parent, &viewBounds);
+
+	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
+
 	HWND button = CreateWindow(
 		TEXT("BUTTON"), TEXT(title),
 		WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | WS_BORDER,
-		bounds->x, bounds->y, bounds->width, bounds->height,
+		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
 		parent,
 		(HMENU)viewID, 
 		GetWindowLong(parent, GWL_HINSTANCE), NULL);
 
 	viewID++;
+	buttonCallback* preInfos = userInfos;
+	userInfos = malloc(sizeof(buttonCallback) * viewID);
+	memcpy(userInfos, preInfos, sizeof(buttonCallback) * viewID - 1);
 
-	int test = 777;
+	SWin_Win32_Button* buttonInfo = malloc(sizeof(SWin_Win32_Button));
+	buttonInfo->callback = callback;
+	buttonInfo->userPointer = userData;
+	buttonInfo->hWnd = button;
 
-	SetWindowLongPtr(button, GWLP_USERDATA, (LONG_PTR)&test);
+	((SWin_Win32_Button**)userInfos)[viewID - 2] = buttonInfo;
+
+	free(preInfos);
 
 	return button;
 }
 
-SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
-	return NULL;
+SLabel* swCreateLabel(HWND parent, SRect* bounds, const char* text) {
+	RECT viewBounds;
+	GetClientRect(parent, &viewBounds);
+
+	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
+
+	HWND label = CreateWindow(
+		TEXT("STATIC"), TEXT(text),
+		WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | WS_BORDER,
+		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
+		parent,
+		(HMENU)viewID,
+		GetWindowLong(parent, GWL_HINSTANCE), NULL);
+
+	viewID++;
+
+	return label;
 }
 
 double swGetTime() {
@@ -261,8 +313,8 @@ inline LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 		window->close = 1;
 	}
 	else if (message == WM_COMMAND) {
-		int* test = GetWindowLongPtr(hWnd, GWLP_USERDATA);
-		printf("Command %d\n", *test);
+		SWin_Win32_Button* buttonInfo = ((SWin_Win32_Button**)userInfos)[wParam-1];
+		buttonInfo->callback(buttonInfo->userPointer);
 	}
 	else {
 		return DefWindowProc(hWnd, message, wParam, lParam);

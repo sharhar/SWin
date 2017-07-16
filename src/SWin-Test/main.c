@@ -16,8 +16,7 @@ int main(int argc, const char * argv[]) {
     
     SButton* button = swCreateButton(rootView, swMakeRect(0, 0, 200, 50), "Button", &buttonCallback, "Callback Test");
     
-    //SLabel* label = swCreateLabel(swMakeRect(50, 200, 50, 50), "Hello, world!");
-    //swSubView(rootView, label);
+    SLabel* label = swCreateLabel(rootView, swMakeRect(50, 200, 50, 50), "Hello, world!");
     
     double startTime = swGetTime();
     
