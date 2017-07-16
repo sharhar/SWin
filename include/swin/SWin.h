@@ -26,16 +26,15 @@ void swCloseWindow(SWindow* window);
 
 SView* swGetRootView(SWindow* window);
 
-SView* swCreateView(SRect* bounds);
-void swSubView(SView* view, SView* sub);
+SView* swCreateView(SView* parent, SRect* bounds);
 
-SOpenGLView* swCreateOpenGLView(SRect* bounds);
+SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds);
 void swMakeContextCurrent(SOpenGLView* view);
 void swSwapBufers(SOpenGLView* view);
 
-SButton* swCreateButton(SRect* bounds, const char* title, void* callback, void* userData);
+SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData);
 
-SLabel* swCreateLabel(SRect* bounds, const char* text);
+SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text);
 
 double swGetTime();
 
