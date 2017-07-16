@@ -10,20 +10,20 @@ int main(int argc, const char * argv[]) {
     swInit();
     
     SWindow* window = swCreateWindow(800, 600, "Hello");
-    SView* rootView = swGetRootView(window);
+    //SView* rootView = swGetRootView(window);
     
-    SOpenGLView* glView = swCreateOpenGLView(swMakeRect(200, 0, 600, 600));
-    swSubView(rootView, glView);
+    //SOpenGLView* glView = swCreateOpenGLView(swMakeRect(200, 0, 600, 600));
+    //swSubView(rootView, glView);
     
-    SButton* button = swCreateButton(swMakeRect(0, 0, 200, 50), "Button", &buttonCallback, "Callback Test");
-    swSubView(rootView, button);
+    //SButton* button = swCreateButton(swMakeRect(0, 0, 200, 50), "Button", &buttonCallback, "Callback Test");
+    //swSubView(rootView, button);
     
-    SLabel* label = swCreateLabel(swMakeRect(50, 200, 50, 50), "Hello, world!");
-    swSubView(rootView, label);
+    //SLabel* label = swCreateLabel(swMakeRect(50, 200, 50, 50), "Hello, world!");
+    //swSubView(rootView, label);
     
     double startTime = swGetTime();
     
-    swMakeContextCurrent(glView);
+    //swMakeContextCurrent(glView);
     
     if(!gladLoadGL()) {
         printf("Error loading OpenGL!\n");
@@ -32,7 +32,9 @@ int main(int argc, const char * argv[]) {
     
     uint32_t frames = 0;
     uint32_t fps = 0;
-    
+
+	glViewport(0, 0, 600, 600);
+
     glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
     
     while (!swCloseRequested(window)) {
@@ -57,8 +59,9 @@ int main(int argc, const char * argv[]) {
         glVertex2f( 0.5f, -0.5f);
         glEnd();
         
-        swSwapBufers(glView);
-        swDraw(window);
+        swSwapBufers(window);
+        
+		swDraw(window);
     }
     
     swCloseWindow(window);

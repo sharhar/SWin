@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.8.11)
 
-file(GLOB_RECURSE RAZTER_HEADERS "${CMAKE_SOURCE_DIR}/include/*.h")
-file(GLOB_RECURSE RAZTER_C *.c)
+file(GLOB_RECURSE SWIN_HEADERS "${CMAKE_SOURCE_DIR}/include/*.h")
 
 if(APPLE)
-	file(GLOB_RECURSE RAZTER_M *.m)
-	add_library(SWin ${RAZTER_HEADERS} ${RAZTER_M} ${RAZTER_C})
+	add_library(SWin ${SWIN_HEADERS} SWin_Cocoa.m SWin_Utils.c)
+elseif(MSVC)
+	add_library(SWin ${SWIN_HEADERS} SWin_Win32.c SWin_Utils.c)
 else()
-	add_library(SWin ${RAZTER_HEADERS} ${RAZTER_C})
+	add_library(SWin ${SWIN_HEADERS} SWin_Utils.c)
 endif()
 
 
