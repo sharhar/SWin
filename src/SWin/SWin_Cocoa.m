@@ -143,17 +143,16 @@ SView* swGetRootView(SWindow* swin) {
     return [window contentView];
 }
 
-SView* swCreateView(SRect* bounds) {
-    return [[NSView alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
+SView* swCreateView(SView* parent, SRect* bounds) {
+    NSView* rootView = (NSView*)parent;
+    NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
+    [rootView addSubview:view];
+    return view;
 }
 
-void swSubView(SView* view, SView* sub) {
-    NSView* rootView = (NSView*)view;
-    NSView* subView = (NSView*)sub;
-    [rootView addSubview:subView];
-}
+SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds) {
+    NSView* rootView = (NSView*)parent;
 
-SOpenGLView* swCreateOpenGLView(SRect* bounds) {
     NSOpenGLPixelFormatAttribute attribs[] = {
         NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersionLegacy,
         NSOpenGLPFADoubleBuffer,
@@ -164,7 +163,7 @@ SOpenGLView* swCreateOpenGLView(SRect* bounds) {
     
     NSOpenGLPixelFormat* pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:attribs];
     NSOpenGLView* view = [[NSOpenGLView alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height) pixelFormat:pixelFormat];
-    
+    [rootView addSubview:view];
     return view;
 }
 
@@ -178,7 +177,8 @@ void swSwapBufers(SOpenGLView* sview) {
     [[view openGLContext] flushBuffer];
 }
 
-SButton* swCreateButton(SRect* bounds, const char* title, void* callback, void* userData) {
+SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData) {
+    NSView* rootView = (NSView*)parent;
     NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
     [button setTitle: @(title)];
     [button setButtonType:NSMomentaryLightButton];
@@ -191,12 +191,21 @@ SButton* swCreateButton(SRect* bounds, const char* title, void* callback, void* 
     [button setTarget:buttonData];
     [button setAction:@selector(buttonPress)];
     
+    [rootView addSubview:button];
+    
     return button;
 }
 
-SLabel* swCreateLabel(SRect* bounds, const char* text) {
-    NSTextField* label = [NSTextField labelWithString:@(text)];
-    label.bounds = NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height);
+SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
+    NSView* rootView = (NSView*)parent;
+    NSTextField* label = [[NSTextField alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
+    [label setStringValue:@(text)];
+    label.drawsBackground = NO;
+    label.bezeled = NO;
+    label.bordered = YES;
+    label.selectable = NO;
+    
+    [rootView addSubview:label];
     return label;
 }
 
