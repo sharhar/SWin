@@ -8,6 +8,12 @@
 
 inline LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+typedef HGLRC(WINAPI * PFNWGLCREATECONTEXT)(HDC hdc);
+typedef BOOL(WINAPI * PFNWGLMAKECURRENT)(HDC hdc, HGLRC hglrc);
+
+PFNWGLCREATECONTEXT swin_win32_createContext;
+PFNWGLMAKECURRENT swin_win32_makecurrent;
+
 typedef struct SWin_Win32_Time {
 	uint8_t hasPC;
 	uint64_t frequency;
@@ -39,6 +45,7 @@ typedef struct SWin_Win32_Button {
 SWin_Win32_Time __sWin_Win32_Time;
 uint32_t viewID;
 HFONT font;
+HMODULE libGL;
 
 void* userInfos;
 
@@ -58,6 +65,11 @@ void swInit() {
 
 	font = CreateFont(0, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
 		CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FF_DONTCARE, TEXT("Segoe UI"));
+
+	libGL = LoadLibraryW(L"opengl32.dll");
+
+	swin_win32_createContext = GetProcAddress(libGL, "wglCreateContext");
+	swin_win32_makecurrent = GetProcAddress(libGL, "wglMakeCurrent");
 }
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
@@ -225,7 +237,7 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
 		return NULL;
 	}
 
-	view->hRc = wglCreateContext(view->hDc);
+	view->hRc = swin_win32_createContext(view->hDc);
 
 	SetWindowLongPtr(view->hWnd, GWLP_USERDATA, (LONG_PTR)view);
 
@@ -234,12 +246,16 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
 
 void swMakeContextCurrent(HWND view) {
 	SWin_Win32_OpenGLView* glView = GetWindowLongPtr(view, GWLP_USERDATA);
-	wglMakeCurrent(glView->hDc, glView->hRc);
+	swin_win32_makecurrent(glView->hDc, glView->hRc);
 }
 
 void swSwapBufers(HWND view) {
 	SWin_Win32_OpenGLView* glView = GetWindowLongPtr(view, GWLP_USERDATA);
 	SwapBuffers(glView->hDc);
+}
+
+void* swGetProcAddress(const char* name) {
+	return GetProcAddress(libGL, name);
 }
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonCallback callback, void* userData) {

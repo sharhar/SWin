@@ -1,6 +1,29 @@
 #include <swin/SWin.h>
-#include "glad/glad.h"
 #include <stdio.h>
+
+#define GL_COLOR_BUFFER_BIT 0x00004000
+#define GL_TRIANGLES 0x0004
+
+#ifdef WIN32
+#define pfnglprefunc __stdcall *
+#else
+#define pfnglprefunc
+#endif
+
+typedef void (pfnglprefunc PFNGLCLEARPROC)(unsigned int mask);
+PFNGLCLEARPROC __glClear;
+typedef void (pfnglprefunc PFNGLCLEARCOLORPROC)(float red, float green, float blue, float alpha);
+PFNGLCLEARCOLORPROC __glClearColor;
+typedef void (pfnglprefunc PFNGLCOLOR3FPROC)(float red, float green, float blue);
+PFNGLCOLOR3FPROC __glColor3f;
+typedef void (pfnglprefunc PFNGLBEGINPROC)(unsigned int mode);
+PFNGLBEGINPROC __glBegin;
+typedef void (pfnglprefunc PFNGLVIEWPORTPROC)(int x, int y, int width, int height);
+PFNGLVIEWPORTPROC __glViewport;
+typedef void (pfnglprefunc PFNGLENDPROC)();
+PFNGLENDPROC __glEnd;
+typedef void (pfnglprefunc PFNGLVERTEX2FPROC)(float x, float y);
+PFNGLVERTEX2FPROC __glVertex2f;
 
 void buttonCallback(void* userData) {
     printf("%s\n", userData);
@@ -21,18 +44,21 @@ int main(int argc, const char * argv[]) {
     double startTime = swGetTime();
     
     swMakeContextCurrent(glView);
-    
-    if(!gladLoadGL()) {
-        printf("Error loading OpenGL!\n");
-        return -1;
-    }
-    
+
+	__glClear = swGetProcAddress("glClear");
+	__glClearColor = swGetProcAddress("glClearColor");
+	__glViewport = swGetProcAddress("glViewport");
+	__glColor3f = swGetProcAddress("glColor3f");
+	__glBegin = swGetProcAddress("glBegin");
+	__glVertex2f = swGetProcAddress("glVertex2f");
+	__glEnd = swGetProcAddress("glEnd");
+
     uint32_t frames = 0;
     uint32_t fps = 0;
 
-	glViewport(0, 0, 600, 600);
+	__glViewport(0, 0, 600, 600);
 
-    glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
+    __glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
     
     while (!swCloseRequested(window)) {
         swPollEvents();
@@ -47,14 +73,14 @@ int main(int argc, const char * argv[]) {
             printf("%d\n", fps);
         }
         
-        glClear(GL_COLOR_BUFFER_BIT);
+		__glClear(GL_COLOR_BUFFER_BIT);
         
-        glColor3f(1.0f, 1.0f, 1.0f);
-        glBegin(GL_TRIANGLES);
-        glVertex2f(-0.5f, -0.5f);
-        glVertex2f( 0.0f,  0.5f);
-        glVertex2f( 0.5f, -0.5f);
-        glEnd();
+        __glColor3f(1.0f, 1.0f, 1.0f);
+        __glBegin(GL_TRIANGLES);
+        __glVertex2f(-0.5f, -0.5f);
+        __glVertex2f( 0.0f,  0.5f);
+        __glVertex2f( 0.5f, -0.5f);
+        __glEnd();
         
         swSwapBufers(glView);
 		swDraw(window);

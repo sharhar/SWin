@@ -32,6 +32,8 @@ SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds);
 void swMakeContextCurrent(SOpenGLView* view);
 void swSwapBufers(SOpenGLView* view);
 
+void* swGetProcAddress(const char* name);
+
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData);
 
 SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text);
@@ -42,4 +44,4 @@ SRect* swMakeRect(float x, float y, float w, float h);
 
 void swTerminate();
 
-#endif /* SWin_h */
+#endif
