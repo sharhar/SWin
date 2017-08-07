@@ -4,6 +4,8 @@
 #include <math.h>
 #include <stdio.h>
 
+#pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
 inline LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 typedef struct SWin_Win32_Time {
@@ -36,6 +38,7 @@ typedef struct SWin_Win32_Button {
 
 SWin_Win32_Time __sWin_Win32_Time;
 uint32_t viewID;
+HFONT font;
 
 void* userInfos;
 
@@ -52,6 +55,9 @@ void swInit() {
 
 	viewID = 1;
 	userInfos = malloc(sizeof(SWin_Win32_Button) * viewID);
+
+	font = CreateFont(0, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
+		CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FF_DONTCARE, TEXT("Segoe UI"));
 }
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
@@ -110,6 +116,8 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	UpdateWindow(window->hWnd);
 	SetForegroundWindow(window->hWnd);
 	SetFocus(window->hWnd);
+
+	SendMessage(window->hWnd, WM_SETFONT, font, TRUE);
 
 	return window;
 }
@@ -242,11 +250,13 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonC
 
 	HWND button = CreateWindow(
 		TEXT("BUTTON"), TEXT(title),
-		WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | WS_BORDER,
+		WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
 		parent,
 		(HMENU)viewID, 
 		GetWindowLong(parent, GWL_HINSTANCE), NULL);
+
+	SendMessage(button, WM_SETFONT, font, TRUE);
 
 	viewID++;
 	buttonCallback* preInfos = userInfos;
@@ -278,6 +288,8 @@ SLabel* swCreateLabel(HWND parent, SRect* bounds, const char* text) {
 		parent,
 		(HMENU)viewID,
 		GetWindowLong(parent, GWL_HINSTANCE), NULL);
+
+	SendMessage(label, WM_SETFONT, font, TRUE);
 
 	viewID++;
 

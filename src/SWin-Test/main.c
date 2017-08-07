@@ -14,9 +14,9 @@ int main(int argc, const char * argv[]) {
     
     SOpenGLView* glView = swCreateOpenGLView(rootView, swMakeRect(200, 0, 600, 600));
     
-    SButton* button = swCreateButton(rootView, swMakeRect(0, 0, 200, 50), "Button", &buttonCallback, "Callback Test");
+    SButton* button = swCreateButton(rootView, swMakeRect(10, 10, 180, 30), "Button", &buttonCallback, "Callback Test");
     
-    SLabel* label = swCreateLabel(rootView, swMakeRect(50, 200, 50, 50), "Hello, world!");
+    SLabel* label = swCreateLabel(rootView, swMakeRect(50, 200, 100, 100), "Hello, world!");
     
     double startTime = swGetTime();
     
