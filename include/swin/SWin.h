@@ -38,6 +38,10 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* c
 
 SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text);
 
+STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text);
+
+char* swGetTextFromTextField(STextField* textField);
+
 double swGetTime();
 
 SRect* swMakeRect(float x, float y, float w, float h);

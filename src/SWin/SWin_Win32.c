@@ -47,9 +47,11 @@ uint32_t viewID;
 HFONT font;
 HMODULE libGL;
 
-void* userInfos;
-
 void swInit() {
+#ifndef _DEBUG
+	FreeConsole();
+#endif
+
 	uint64_t frequency;
 
 	if (QueryPerformanceFrequency((LARGE_INTEGER*)&frequency)) {
@@ -61,7 +63,6 @@ void swInit() {
 	}
 
 	viewID = 1;
-	userInfos = malloc(sizeof(SWin_Win32_Button) * viewID);
 
 	font = CreateFont(0, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
 		CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FF_DONTCARE, TEXT("Segoe UI"));
@@ -80,6 +81,14 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	LOGPALETTE* lpPal;
 
 	window->instance = GetModuleHandle(NULL);
+
+	RECT contentSize;
+	contentSize.bottom = height;
+	contentSize.top = 0;
+	contentSize.left = 0;
+	contentSize.right = width;
+
+	AdjustWindowRectEx(&contentSize, WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, FALSE, WS_EX_LAYERED);
 
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_DBLCLKS;
@@ -102,21 +111,13 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 
 	int nStyle = WS_OVERLAPPED | WS_SYSMENU | WS_VISIBLE | WS_CAPTION | WS_MINIMIZEBOX;
 
-	window->hWnd = CreateWindowEx(WS_EX_LAYERED, title, title, WS_SYSMENU, 100, 100, width, height, HWND_DESKTOP, NULL, window->instance, NULL);
+	window->hWnd = CreateWindowEx(WS_EX_LAYERED, title, title, WS_SYSMENU, 100, 100, contentSize.right - contentSize.left, contentSize.bottom - contentSize.top, HWND_DESKTOP, NULL, window->instance, NULL);
 	if (window->hWnd == NULL) {
 		MessageBox(NULL, "CreateWindowEx() failed", "Error", MB_OK);
 		PostQuitMessage(0);
 		printf("Problem!\n");
 		return;
 	}
-
-	RECT contentSize;
-	contentSize.bottom = height;
-	contentSize.top = 0;
-	contentSize.left = 0;
-	contentSize.right = width;
-
-	AdjustWindowRectEx(&contentSize, WS_SYSMENU, FALSE, WS_EX_LAYERED);
 
 	ZeroMemory(&window->msg, sizeof(MSG));
 	window->close = 0;
@@ -164,7 +165,52 @@ SView* swGetRootView(SWin_Win32_Window* window) {
 }
 
 SView* swCreateView(HWND parent, SRect* bounds) {
-	return NULL;
+	size_t len = sizeof(char) * (size_t)ceil(log10(viewID)) + 2;
+
+	char* viewIDStr = malloc(len);
+	memset(viewIDStr, 0, len);
+
+	sprintf(viewIDStr + 1, "%d", viewID);
+
+	viewIDStr[0] = 'C';
+
+	WNDCLASSEX wc;
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.style = 0;
+	wc.lpfnWndProc = WndProc;
+	wc.cbClsExtra = 0;
+	wc.cbWndExtra = 0;
+	wc.hInstance = GetWindowLong(parent, GWL_HINSTANCE);
+	wc.hIcon = LoadIcon(NULL, IDI_WINLOGO);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
+	wc.lpszMenuName = NULL;
+	wc.lpszClassName = viewIDStr;
+	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+
+	if (!RegisterClassEx(&wc)) {
+		MessageBox(NULL, "RegisterClassEx() failed", "Error", MB_OK);
+		printf("Problem!\n");
+		return;
+	}
+
+	RECT viewBounds;
+	GetClientRect(parent, &viewBounds);
+
+	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
+
+	HWND hWnd = CreateWindowEx(0, TEXT(viewIDStr),
+		(LPCTSTR)NULL,
+		WS_CHILD | WS_BORDER | WS_VISIBLE,
+		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
+		parent,
+		(HMENU)viewID,
+		GetWindowLong(parent, GWL_HINSTANCE),
+		NULL);
+
+	viewID++;
+
+	return hWnd;
 }
 
 SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
@@ -275,18 +321,13 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonC
 	SendMessage(button, WM_SETFONT, font, TRUE);
 
 	viewID++;
-	buttonCallback* preInfos = userInfos;
-	userInfos = malloc(sizeof(buttonCallback) * viewID);
-	memcpy(userInfos, preInfos, sizeof(buttonCallback) * viewID - 1);
 
 	SWin_Win32_Button* buttonInfo = malloc(sizeof(SWin_Win32_Button));
 	buttonInfo->callback = callback;
 	buttonInfo->userPointer = userData;
 	buttonInfo->hWnd = button;
 
-	((SWin_Win32_Button**)userInfos)[viewID - 2] = buttonInfo;
-
-	free(preInfos);
+	SetWindowLongPtr(button, GWLP_USERDATA, (LONG_PTR)buttonInfo);
 
 	return button;
 }
@@ -310,6 +351,42 @@ SLabel* swCreateLabel(HWND parent, SRect* bounds, const char* text) {
 	viewID++;
 
 	return label;
+}
+
+STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
+	RECT viewBounds;
+	GetClientRect(parent, &viewBounds);
+
+	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
+
+	HWND textField = CreateWindow(
+		TEXT("EDIT"), TEXT(text),
+		WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
+		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
+		parent,
+		(HMENU)viewID,
+		GetWindowLong(parent, GWL_HINSTANCE), NULL);
+
+	SendMessage(textField, WM_SETFONT, font, TRUE);
+
+	viewID++;
+
+	return textField;
+}
+
+char* swGetTextFromTextField(STextField* textField) {
+	HWND hwnd = (HWND)textField;
+
+	int length = SendMessage(hwnd, WM_GETTEXTLENGTH, 0, 0);
+
+	if (length == -1) {
+		return "";
+	}
+
+	char* buffer = malloc(sizeof(char) * (length + 1));
+	SendMessage(hwnd, WM_GETTEXT, length + 1, (LPARAM)buffer);
+
+	return buffer;
 }
 
 double swGetTime() {
@@ -341,8 +418,13 @@ inline LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 		window->close = 1;
 	}
 	else if (message == WM_COMMAND) {
-		SWin_Win32_Button* buttonInfo = ((SWin_Win32_Button**)userInfos)[wParam-1];
-		buttonInfo->callback(buttonInfo->userPointer);
+		if (HIWORD(wParam) == BN_CLICKED) {
+			SWin_Win32_Button* buttonInfo = GetWindowLongPtr((HWND)lParam, GWLP_USERDATA);
+			buttonInfo->callback(buttonInfo->userPointer);
+		}
+		else if (HIWORD(wParam) == EN_CHANGE) {
+			
+		}
 	}
 	else {
 		return DefWindowProc(hWnd, message, wParam, lParam);

@@ -25,22 +25,24 @@ PFNGLENDPROC __glEnd;
 typedef void (pfnglprefunc PFNGLVERTEX2FPROC)(float x, float y);
 PFNGLVERTEX2FPROC __glVertex2f;
 
-void buttonCallback(void* userData) {
-    printf("%s\n", userData);
+void buttonCallback(STextField* textField) {
+    printf("%s\n", swGetTextFromTextField(textField));
 }
 
 int main(int argc, const char * argv[]) {
     swInit();
     
-    SWindow* window = swCreateWindow(800, 600, "Hello");
+    SWindow* window = swCreateWindow(1000, 620, "UI Test");
     SView* rootView = swGetRootView(window);
     
-    SOpenGLView* glView = swCreateOpenGLView(rootView, swMakeRect(200, 0, 600, 600));
+    SOpenGLView* glView = swCreateOpenGLView(rootView, swMakeRect(390, 10, 600, 600));
     
-    SButton* button = swCreateButton(rootView, swMakeRect(10, 10, 180, 30), "Button", &buttonCallback, "Callback Test");
+	STextField* textField = swCreateTextField(rootView, swMakeRect(0, 400, 200, 25), "text");
+
+    SButton* button = swCreateButton(rootView, swMakeRect(10, 10, 180, 30), "Button", &buttonCallback, textField);
     
     SLabel* label = swCreateLabel(rootView, swMakeRect(50, 200, 100, 100), "Hello, world!");
-    
+	
     double startTime = swGetTime();
     
     swMakeContextCurrent(glView);
@@ -75,11 +77,13 @@ int main(int argc, const char * argv[]) {
         
 		__glClear(GL_COLOR_BUFFER_BIT);
         
-        __glColor3f(1.0f, 1.0f, 1.0f);
         __glBegin(GL_TRIANGLES);
-        __glVertex2f(-0.5f, -0.5f);
-        __glVertex2f( 0.0f,  0.5f);
-        __glVertex2f( 0.5f, -0.5f);
+		__glColor3f(1.0f, 0.0f, 0.0f);
+		__glVertex2f(-0.9f, -0.9f);
+		__glColor3f(0.0f, 1.0f, 0.0f);
+        __glVertex2f( 0.0f,  0.9f);
+		__glColor3f(0.0f, 0.0f, 1.0f);
+        __glVertex2f( 0.9f, -0.9f);
         __glEnd();
         
         swSwapBufers(glView);
