@@ -6,7 +6,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+option(SWIN_BUILD_TEST "Build the SWin-Test project" ON)
+
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/SWin")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/SWin-Test")
+
+if(SWIN_BUILD_TEST)
+	add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/src/SWin-Test")
+endif()
