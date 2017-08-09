@@ -4,15 +4,32 @@
 #include <math.h>
 #include <stdio.h>
 
+#define WGL_DRAW_TO_WINDOW_ARB            0x2001
+#define WGL_SUPPORT_OPENGL_ARB            0x2010
+#define WGL_DOUBLE_BUFFER_ARB             0x2011
+#define WGL_TYPE_RGBA_ARB                 0x202B
+#define WGL_PIXEL_TYPE_ARB                0x2013
+#define WGL_COLOR_BITS_ARB                0x2014
+#define WGL_DEPTH_BITS_ARB                0x2022
+#define WGL_STENCIL_BITS_ARB              0x2023
+#define WGL_CONTEXT_MAJOR_VERSION_ARB     0x2091
+#define WGL_CONTEXT_MINOR_VERSION_ARB     0x2092
+#define WGL_CONTEXT_FLAGS_ARB             0x2094
+#define WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB 0x00000002
+
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 inline LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+typedef BOOL(WINAPI * PFNWGLCHOOSEPIXELFORMATARBPROC) (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
+typedef HGLRC(WINAPI * PFNWGLCREATECONTEXTATTRIBSARBPROC) (HDC hDC, HGLRC hShareContext, const int *attribList);
 typedef HGLRC(WINAPI * PFNWGLCREATECONTEXT)(HDC hdc);
 typedef BOOL(WINAPI * PFNWGLMAKECURRENT)(HDC hdc, HGLRC hglrc);
+typedef PROC(WINAPI * PFNWGLGETPROCADDRESS)(LPCSTR lpszProc);
 
 PFNWGLCREATECONTEXT swin_win32_createContext;
 PFNWGLMAKECURRENT swin_win32_makecurrent;
+PFNWGLGETPROCADDRESS swin_win32_getProcAddress;
 
 typedef struct SWin_Win32_Time {
 	uint8_t hasPC;
@@ -71,6 +88,7 @@ void swInit() {
 
 	swin_win32_createContext = GetProcAddress(libGL, "wglCreateContext");
 	swin_win32_makecurrent = GetProcAddress(libGL, "wglMakeCurrent");
+	swin_win32_getProcAddress = GetProcAddress(libGL, "wglGetProcAddress");
 }
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
@@ -271,6 +289,7 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
 	pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
 	pfd.iPixelType = PFD_TYPE_RGBA;
 	pfd.cColorBits = 32;
+	pfd.cDepthBits = 32;
 
 	int pf = ChoosePixelFormat(view->hDc, &pfd);
 	if (pf == 0) {
@@ -284,6 +303,24 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
 	}
 
 	view->hRc = swin_win32_createContext(view->hDc);
+	
+	swin_win32_makecurrent(view->hDc, view->hRc);
+
+	PFNWGLCREATECONTEXTATTRIBSARBPROC pfnCreateContextAttribsARB = swGetProcAddress("wglCreateContextAttribsARB");
+
+	swin_win32_makecurrent(view->hDc, NULL);
+
+	int iContextAttribs[] =
+	{
+		WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+		WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+		WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+		0
+	};
+
+	view->hRc = pfnCreateContextAttribsARB(view->hDc, 0, iContextAttribs);
+	
+	swin_win32_makecurrent(view->hDc, view->hRc);
 
 	SetWindowLongPtr(view->hWnd, GWLP_USERDATA, (LONG_PTR)view);
 
@@ -301,7 +338,9 @@ void swSwapBufers(HWND view) {
 }
 
 void* swGetProcAddress(const char* name) {
-	return GetProcAddress(libGL, name);
+	void* result = swin_win32_getProcAddress(name);
+
+	return result == NULL ? GetProcAddress(libGL, name) : result;
 }
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonCallback callback, void* userData) {
