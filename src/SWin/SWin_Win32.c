@@ -4,23 +4,16 @@
 #include <math.h>
 #include <stdio.h>
 
-#define WGL_DRAW_TO_WINDOW_ARB            0x2001
-#define WGL_SUPPORT_OPENGL_ARB            0x2010
-#define WGL_DOUBLE_BUFFER_ARB             0x2011
-#define WGL_TYPE_RGBA_ARB                 0x202B
-#define WGL_PIXEL_TYPE_ARB                0x2013
-#define WGL_COLOR_BITS_ARB                0x2014
-#define WGL_DEPTH_BITS_ARB                0x2022
-#define WGL_STENCIL_BITS_ARB              0x2023
 #define WGL_CONTEXT_MAJOR_VERSION_ARB     0x2091
 #define WGL_CONTEXT_MINOR_VERSION_ARB     0x2092
 #define WGL_CONTEXT_FLAGS_ARB             0x2094
-#define WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB 0x00000002
+#define WGL_CONTEXT_PROFILE_MASK_ARB      0x9126
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 inline LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+typedef BOOL(WINAPI * PFNWGLSWAPINTERVALEXTPROC)(int interval);
 typedef BOOL(WINAPI * PFNWGLCHOOSEPIXELFORMATARBPROC) (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
 typedef HGLRC(WINAPI * PFNWGLCREATECONTEXTATTRIBSARBPROC) (HDC hDC, HGLRC hShareContext, const int *attribList);
 typedef HGLRC(WINAPI * PFNWGLCREATECONTEXT)(HDC hdc);
@@ -231,7 +224,7 @@ SView* swCreateView(HWND parent, SRect* bounds) {
 	return hWnd;
 }
 
-SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
+SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds, SOpenGLContextAttribs* attribs) {
 	SWin_Win32_OpenGLView* view = malloc(sizeof(SWin_Win32_OpenGLView));
 	
 	size_t len = sizeof(char) * (size_t)ceil(log10(viewID)) + 2;
@@ -307,20 +300,24 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds) {
 	swin_win32_makecurrent(view->hDc, view->hRc);
 
 	PFNWGLCREATECONTEXTATTRIBSARBPROC pfnCreateContextAttribsARB = swGetProcAddress("wglCreateContextAttribsARB");
+	PFNWGLSWAPINTERVALEXTPROC pfnSwapIntervalEXT = swGetProcAddress("wglSwapIntervalEXT");
 
 	swin_win32_makecurrent(view->hDc, NULL);
 
 	int iContextAttribs[] =
 	{
-		WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-		WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-		WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB,
+		WGL_CONTEXT_MAJOR_VERSION_ARB, attribs->major,
+		WGL_CONTEXT_MINOR_VERSION_ARB, attribs->minor,
+		WGL_CONTEXT_PROFILE_MASK_ARB, 1,
+		WGL_CONTEXT_FLAGS_ARB, attribs->debug ? 1 : 0,
 		0
 	};
 
 	view->hRc = pfnCreateContextAttribsARB(view->hDc, 0, iContextAttribs);
-	
+
 	swin_win32_makecurrent(view->hDc, view->hRc);
+
+	pfnSwapIntervalEXT(attribs->swapInterval);
 
 	SetWindowLongPtr(view->hWnd, GWLP_USERDATA, (LONG_PTR)view);
 

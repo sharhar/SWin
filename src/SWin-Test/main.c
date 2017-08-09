@@ -1,6 +1,7 @@
 #include <swin/SWin.h>
 #include <stdio.h>
 
+#define GL_VERSION 0x1F02
 #define GL_COLOR_BUFFER_BIT 0x00004000
 #define GL_TRIANGLES 0x0004
 
@@ -24,6 +25,8 @@ typedef void (pfnglprefunc PFNGLENDPROC)();
 PFNGLENDPROC __glEnd;
 typedef void (pfnglprefunc PFNGLVERTEX2FPROC)(float x, float y);
 PFNGLVERTEX2FPROC __glVertex2f;
+typedef const char* (pfnglprefunc PFNGLGETSTRINGPROC)(unsigned int name);
+PFNGLGETSTRINGPROC __glGetString;
 
 void buttonCallback(STextField* textField) {
     printf("%s\n", swGetTextFromTextField(textField));
@@ -35,7 +38,13 @@ int main(int argc, const char * argv[]) {
     SWindow* window = swCreateWindow(1000, 620, "UI Test");
     SView* rootView = swGetRootView(window);
     
-    SOpenGLView* glView = swCreateOpenGLView(rootView, swMakeRect(390, 10, 600, 600));
+	SOpenGLContextAttribs attribs;
+	attribs.major = 2;
+	attribs.minor = 1;
+	attribs.debug = 0;
+	attribs.swapInterval = 1;
+
+    SOpenGLView* glView = swCreateOpenGLView(rootView, swMakeRect(390, 10, 600, 600), &attribs);
     
 	STextField* textField = swCreateTextField(rootView, swMakeRect(0, 400, 200, 25), "text");
 
@@ -54,6 +63,9 @@ int main(int argc, const char * argv[]) {
 	__glBegin = swGetProcAddress("glBegin");
 	__glVertex2f = swGetProcAddress("glVertex2f");
 	__glEnd = swGetProcAddress("glEnd");
+	__glGetString = swGetProcAddress("glGetString");
+
+	printf("Version: %s\n", __glGetString(GL_VERSION));
 
     uint32_t frames = 0;
     uint32_t fps = 0;

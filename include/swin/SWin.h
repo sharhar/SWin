@@ -14,6 +14,13 @@ typedef struct SRect {
     float x, y, width, height;
 } SRect;
 
+typedef struct SOpenGLContextAttribs {
+	int major;
+	int minor;
+	int debug;
+	int swapInterval;
+} SOpenGLContextAttribs;
+
 void swInit();
 
 SWindow* swCreateWindow(int width, int height, const char* title);
@@ -28,7 +35,7 @@ SView* swGetRootView(SWindow* window);
 
 SView* swCreateView(SView* parent, SRect* bounds);
 
-SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds);
+SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds, SOpenGLContextAttribs* attribs);
 void swMakeContextCurrent(SOpenGLView* view);
 void swSwapBufers(SOpenGLView* view);
 
