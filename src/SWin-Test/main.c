@@ -46,9 +46,9 @@ int main(int argc, const char * argv[]) {
 
     SOpenGLView* glView = swCreateOpenGLView(rootView, swMakeRect(390, 10, 600, 600), &attribs);
     
-	STextField* textField = swCreateTextField(rootView, swMakeRect(0, 400, 200, 25), "text");
+	STextField* textField = swCreateTextField(rootView, swMakeRect(10, 580, 285, 30), "text");
 
-    SButton* button = swCreateButton(rootView, swMakeRect(10, 10, 180, 30), "Button", &buttonCallback, textField);
+    SButton* button = swCreateButton(rootView, swMakeRect(305, 580, 75, 30), "Submit", &buttonCallback, textField);
     
     SLabel* label = swCreateLabel(rootView, swMakeRect(50, 200, 100, 100), "Hello, world!");
 	
