@@ -8,7 +8,7 @@
 #ifdef WIN32
 #define pfnglprefunc __stdcall *
 #else
-#define pfnglprefunc
+#define pfnglprefunc *
 #endif
 
 typedef void (pfnglprefunc PFNGLCLEARPROC)(unsigned int mask);
@@ -64,6 +64,7 @@ int main(int argc, const char * argv[]) {
 	__glVertex2f = swGetProcAddress("glVertex2f");
 	__glEnd = swGetProcAddress("glEnd");
 	__glGetString = swGetProcAddress("glGetString");
+	
 
 	printf("Version: %s\n", __glGetString(GL_VERSION));
 
