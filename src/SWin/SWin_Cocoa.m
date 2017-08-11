@@ -106,6 +106,7 @@ void swPollEvents() {
             
             if (ev) {
                 
+                /*
                 if(ev.type ==  NSEventTypeKeyDown) {
                     
                     if(ev.keyCode == 49) {
@@ -113,8 +114,12 @@ void swPollEvents() {
                     }
                     
                 } else {
-                    [NSApp sendEvent: ev];
+                
                 }
+                 
+                 */
+                
+                [NSApp sendEvent: ev];
             }
         } while (ev);
     }
@@ -179,10 +184,8 @@ SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds, SOpenGLContextAttr
 	
 	[[view openGLContext] makeCurrentContext];
 	
-	GLint sync = 1;//attribs->swapInterval;
-	//[[view openGLContext] setValues:&sync forParameter:NSOpenGLCPSwapInterval];
-	
-	CGLSetParameter(CGLGetCurrentContext(), kCGLCPSwapInterval, &sync);
+	GLint sync = attribs->swapInterval;
+	[[view openGLContext] setValues:&sync forParameter:NSOpenGLCPSwapInterval];
 	
 	return view;
 }
@@ -244,9 +247,23 @@ double swGetTime() {
 }
 
 STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
-	return NULL;
+    NSView* rootView = (NSView*)parent;
+    NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
+    
+    [textField setStringValue:@(text)];
+    textField.drawsBackground = YES;
+    textField.bezeled = YES;
+    textField.bordered = YES;
+    textField.selectable = YES;
+    textField.editable = YES;
+    
+    [rootView addSubview:textField];
+    
+	return textField;
 }
 
 char* swGetTextFromTextField(STextField* textField) {
-	return NULL;
+    NSTextField* field = (NSTextField*)textField;
+    
+	return [[field stringValue] UTF8String];
 }
