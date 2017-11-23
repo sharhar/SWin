@@ -14,6 +14,11 @@ typedef struct SRect {
     float x, y, width, height;
 } SRect;
 
+typedef struct SMouseState {
+	float x, y;
+	uint8_t ldown;
+} SMouseState;
+
 typedef struct SOpenGLContextAttribs {
 	int major;
 	int minor;
@@ -54,5 +59,7 @@ double swGetTime();
 SRect* swMakeRect(float x, float y, float w, float h);
 
 void swTerminate();
+
+SMouseState* swGetMouseState(SWindow* window);
 
 #endif

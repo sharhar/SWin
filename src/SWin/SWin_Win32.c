@@ -30,19 +30,26 @@ typedef struct SWin_Win32_Time {
 } SWin_Win32_Time;
 
 typedef struct SWin_Win32_Window {
+	struct SWin_Win32_Window* root;
 	HINSTANCE instance;
 	HWND hWnd;
 	const char* title;
 	MSG msg;
 	int close;
+	SMouseState* mouseState;
 } SWin_Win32_Window;
 
 typedef struct SWin_Win32_OpenGLView {
+	struct SWin_Win32_Window* root;
 	HGLRC hRc;
 	HDC hDc;
 	HPALETTE hPalette;
 	HWND hWnd;
 } SWin_Win32_OpenGLView;
+
+typedef struct SWin_Win32_RootPointer {
+	SWin_Win32_Window* window;
+} SWin_Win32_RootPointer;
 
 typedef void(*buttonCallback)(void*);
 
@@ -143,6 +150,13 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 
 	SendMessage(window->hWnd, WM_SETFONT, font, TRUE);
 
+	window->mouseState = malloc(sizeof(SMouseState));
+	window->mouseState->x = 0;
+	window->mouseState->y = 0;
+	window->mouseState->ldown = 0;
+
+	window->root = window;
+
 	return window;
 }
 
@@ -218,6 +232,8 @@ SView* swCreateView(HWND parent, SRect* bounds) {
 		(HMENU)viewID,
 		GetWindowLong(parent, GWL_HINSTANCE),
 		NULL);
+
+	SetWindowLongPtr(hWnd, GWLP_USERDATA, GetWindowLongPtr(parent, GWLP_USERDATA));
 
 	viewID++;
 
@@ -320,6 +336,9 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds, SOpenGLContextAttrib
 	pfnSwapIntervalEXT(attribs->swapInterval);
 
 	SetWindowLongPtr(view->hWnd, GWLP_USERDATA, (LONG_PTR)view);
+
+	SWin_Win32_RootPointer* root = GetWindowLongPtr(parent, GWLP_USERDATA);
+	view->root = root->window;
 
 	return view->hWnd;
 }
@@ -441,16 +460,26 @@ void swTerminate() {
 	
 }
 
+SMouseState* swGetMouseState(SWin_Win32_Window* window) {
+	return window->mouseState;
+}
+
 inline LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT ps;
 	HDC hdc;
+
+	SWin_Win32_RootPointer* root = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+	SWin_Win32_Window* window = NULL;
+
+	if (root != NULL) {
+		window = root->window;;
+	}
 
 	if (message == WM_PAINT) {
 		hdc = BeginPaint(hWnd, &ps);
 		EndPaint(hWnd, &ps);
 	}
 	else if (message == WM_CLOSE) {
-		SWin_Win32_Window* window = GetWindowLongPtr(hWnd, GWLP_USERDATA);
 		window->close = 1;
 	}
 	else if (message == WM_COMMAND) {
@@ -461,6 +490,20 @@ inline LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 		else if (HIWORD(wParam) == EN_CHANGE) {
 			
 		}
+	}
+	else if (message == WM_MOUSEMOVE) {
+		POINT pt;
+		GetCursorPos(&pt);
+		ScreenToClient(window->hWnd, &pt);
+
+		window->mouseState->x = (float)pt.x;
+		window->mouseState->y = (float)pt.y;
+	}
+	else if (message == WM_LBUTTONDOWN) {
+		window->mouseState->ldown = 1;
+	}
+	else if (message == WM_LBUTTONUP) {
+		window->mouseState->ldown = 0;
 	}
 	else {
 		return DefWindowProc(hWnd, message, wParam, lParam);
