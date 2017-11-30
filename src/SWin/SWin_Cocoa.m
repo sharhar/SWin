@@ -7,6 +7,7 @@
 
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>{
     BOOL running;
+    SMouseState* mouseState;
 }
 @end
 
@@ -16,6 +17,10 @@
     self = [super init];
     
     self->running = YES;
+    self->mouseState = malloc(sizeof(SMouseState));
+    self->mouseState->x = 0;
+    self->mouseState->y = 0;
+    self->mouseState->ldown = 0;
     
     return self;
 }
@@ -24,10 +29,18 @@
     return self->running;
 }
 
+- (SMouseState*) getMouseState {
+    return self->mouseState;
+}
+
 #pragma mark - Window Delegate
 
 - (void)windowWillClose:(NSNotification *)notification {
     self->running = NO;
+}
+
+- (void)mouseMoved:(NSEvent *)event {
+    printf("hello\n");
 }
 
 @end
@@ -81,7 +94,6 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
     
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     
-    
     [window setDelegate:(AppDelegate*)[NSApp delegate]];
     [window setAcceptsMouseMovedEvents:YES];
     
@@ -105,6 +117,32 @@ void swPollEvents() {
                                       dequeue: YES];
             
             if (ev) {
+                
+                if(ev.type == NSEventTypeMouseMoved || ev.type == NSEventTypeLeftMouseDragged) {
+                    NSPoint point = [[ev.window contentView] convertPoint:[ev locationInWindow] fromView:nil];
+                    point.y = [[ev.window contentView] bounds].size.height - point.y;
+                    
+                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
+                    SMouseState* mouseState = [delegate getMouseState];
+                    
+                    mouseState->x = point.x;
+                    mouseState->y = point.y;
+                    printf("x: %f\ty: %f\n", point.x, point.y);
+                }
+                
+                if(ev.type == NSEventTypeLeftMouseDown) {
+                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
+                    SMouseState* mouseState = [delegate getMouseState];
+                    mouseState->ldown = 1;
+                    printf("down\n");
+                }
+                
+                if(ev.type == NSEventTypeLeftMouseUp) {
+                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
+                    SMouseState* mouseState = [delegate getMouseState];
+                    mouseState->ldown = 0;
+                    printf("up\n");
+                }
                 
                 /*
                 if(ev.type ==  NSEventTypeKeyDown) {
@@ -266,4 +304,10 @@ char* swGetTextFromTextField(STextField* textField) {
     NSTextField* field = (NSTextField*)textField;
     
 	return [[field stringValue] UTF8String];
+}
+
+SMouseState* swGetMouseState(SWindow* swin) {
+    NSWindow* window = (NSWindow*)swin;
+    AppDelegate* delegate = (AppDelegate*)[window delegate];
+    return [delegate getMouseState];
 }
