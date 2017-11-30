@@ -118,7 +118,7 @@ void swPollEvents() {
             
             if (ev) {
                 
-                if(ev.type == NSEventTypeMouseMoved || ev.type == NSEventTypeLeftMouseDragged) {
+                if((ev.type == NSEventTypeMouseMoved || ev.type == NSEventTypeLeftMouseDragged) && ev.window != NULL) {
                     NSPoint point = [[ev.window contentView] convertPoint:[ev locationInWindow] fromView:nil];
                     point.y = [[ev.window contentView] bounds].size.height - point.y;
                     
@@ -127,21 +127,18 @@ void swPollEvents() {
                     
                     mouseState->x = point.x;
                     mouseState->y = point.y;
-                    printf("x: %f\ty: %f\n", point.x, point.y);
                 }
                 
                 if(ev.type == NSEventTypeLeftMouseDown) {
                     AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
                     SMouseState* mouseState = [delegate getMouseState];
                     mouseState->ldown = 1;
-                    printf("down\n");
                 }
                 
                 if(ev.type == NSEventTypeLeftMouseUp) {
                     AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
                     SMouseState* mouseState = [delegate getMouseState];
                     mouseState->ldown = 0;
-                    printf("up\n");
                 }
                 
                 /*
