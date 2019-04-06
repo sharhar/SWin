@@ -505,6 +505,9 @@ inline LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 	else if (message == WM_LBUTTONUP) {
 		window->mouseState->ldown = 0;
 	}
+	else if (message == WM_MOUSEWHEEL) {
+		window->mouseState->scroll += GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+	}
 	else {
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
