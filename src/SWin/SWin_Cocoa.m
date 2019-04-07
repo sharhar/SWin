@@ -141,6 +141,12 @@ void swPollEvents() {
                     mouseState->ldown = 0;
                 }
                 
+                if(ev.type == NSEventTypeScrollWheel) {
+                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
+                    SMouseState* mouseState = [delegate getMouseState];
+                    mouseState->scroll += ev.scrollingDeltaY/10.0f;
+                }
+                
                 /*
                 if(ev.type ==  NSEventTypeKeyDown) {
                     
@@ -199,11 +205,13 @@ SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds, SOpenGLContextAttr
 
 	NSOpenGLPixelFormatAttribute openGLversion = NSOpenGLProfileVersionLegacy;
 	
-	if(attribs->major == 3 && attribs->minor < 3) {
-		openGLversion = NSOpenGLProfileVersion3_2Core;
-	} else if (attribs->major > 2) {
+	if(attribs->major == 4) {
 		openGLversion = NSOpenGLProfileVersion4_1Core;
-	}
+	} else if (attribs->major == 3) {
+        openGLversion = NSOpenGLProfileVersion3_2Core;
+    } else {
+        openGLversion = NSOpenGLProfileVersionLegacy;
+    }
 	
     NSOpenGLPixelFormatAttribute glattribs[] = {
         NSOpenGLPFAOpenGLProfile, openGLversion,
