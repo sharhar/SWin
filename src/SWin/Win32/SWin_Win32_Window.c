@@ -1,95 +1,9 @@
 #include <swin/SWin.h>
-#include <windows.h>
-#include <string.h>
-#include <math.h>
-#include <stdio.h>
-
-#define WGL_CONTEXT_MAJOR_VERSION_ARB     0x2091
-#define WGL_CONTEXT_MINOR_VERSION_ARB     0x2092
-#define WGL_CONTEXT_FLAGS_ARB             0x2094
-#define WGL_CONTEXT_PROFILE_MASK_ARB      0x9126
+#include <swin/SWin_Win32.h>
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-inline LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-
-typedef BOOL(WINAPI * PFNWGLSWAPINTERVALEXTPROC)(int interval);
-typedef BOOL(WINAPI * PFNWGLCHOOSEPIXELFORMATARBPROC) (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
-typedef HGLRC(WINAPI * PFNWGLCREATECONTEXTATTRIBSARBPROC) (HDC hDC, HGLRC hShareContext, const int *attribList);
-typedef HGLRC(WINAPI * PFNWGLCREATECONTEXT)(HDC hdc);
-typedef BOOL(WINAPI * PFNWGLMAKECURRENT)(HDC hdc, HGLRC hglrc);
-typedef PROC(WINAPI * PFNWGLGETPROCADDRESS)(LPCSTR lpszProc);
-
-PFNWGLCREATECONTEXT swin_win32_createContext;
-PFNWGLMAKECURRENT swin_win32_makecurrent;
-PFNWGLGETPROCADDRESS swin_win32_getProcAddress;
-
-typedef struct SWin_Win32_Time {
-	uint8_t hasPC;
-	uint64_t frequency;
-} SWin_Win32_Time;
-
-typedef struct SWin_Win32_Window {
-	struct SWin_Win32_Window* root;
-	HINSTANCE instance;
-	HWND hWnd;
-	const char* title;
-	MSG msg;
-	int close;
-	SMouseState* mouseState;
-} SWin_Win32_Window;
-
-typedef struct SWin_Win32_OpenGLView {
-	struct SWin_Win32_Window* root;
-	HGLRC hRc;
-	HDC hDc;
-	HPALETTE hPalette;
-	HWND hWnd;
-} SWin_Win32_OpenGLView;
-
-typedef struct SWin_Win32_RootPointer {
-	SWin_Win32_Window* window;
-} SWin_Win32_RootPointer;
-
-typedef void(*buttonCallback)(void*);
-
-typedef struct SWin_Win32_Button {
-	buttonCallback callback;
-	void* userPointer;
-	HWND hWnd;
-} SWin_Win32_Button;
-
-SWin_Win32_Time __sWin_Win32_Time;
-uint32_t viewID;
-HFONT font;
-HMODULE libGL;
-
-void swInit() {
-#ifndef _DEBUG
-	FreeConsole();
-#endif
-
-	uint64_t frequency;
-
-	if (QueryPerformanceFrequency((LARGE_INTEGER*)&frequency)) {
-		__sWin_Win32_Time.hasPC = 1;
-		__sWin_Win32_Time.frequency = frequency;
-	} else {
-		__sWin_Win32_Time.hasPC = 0;
-		__sWin_Win32_Time.frequency = 1000;
-	}
-
-	viewID = 1;
-
-	font = CreateFont(0, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
-		CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FF_DONTCARE, TEXT("Segoe UI"));
-
-	libGL = LoadLibraryW(L"opengl32.dll");
-
-	swin_win32_createContext = GetProcAddress(libGL, "wglCreateContext");
-	swin_win32_makecurrent = GetProcAddress(libGL, "wglMakeCurrent");
-	swin_win32_getProcAddress = GetProcAddress(libGL, "wglGetProcAddress");
-}
+uint32_t __sWin_Win32_viewID;
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
 	SWin_Win32_Window* window = malloc(sizeof(SWin_Win32_Window));
@@ -110,7 +24,7 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = CS_DBLCLKS;
-	wc.lpfnWndProc = WndProc;
+	wc.lpfnWndProc = SWin_Win32_Thread_WndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = window->instance;
@@ -140,7 +54,9 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	ZeroMemory(&window->msg, sizeof(MSG));
 	window->close = 0;
 
-	SetWindowLongPtr(window->hWnd, GWLP_USERDATA, (LONG_PTR)window);
+	SWin_Win32_RootPointer* root = (SWin_Win32_RootPointer*)malloc(sizeof(SWin_Win32_RootPointer));
+	root->window = window;
+	SetWindowLongPtr(window->hWnd, GWLP_USERDATA, (LONG_PTR)root);
 
 	SetLayeredWindowAttributes(window->hWnd, RGB(0, 0, 0), 255, LWA_ALPHA);
 	ShowWindow(window->hWnd, SW_SHOW);
@@ -148,7 +64,7 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	SetForegroundWindow(window->hWnd);
 	SetFocus(window->hWnd);
 
-	SendMessage(window->hWnd, WM_SETFONT, font, TRUE);
+	SendMessage(window->hWnd, WM_SETFONT, __sWin_Win32_font, TRUE);
 
 	window->mouseState = malloc(sizeof(SMouseState));
 	window->mouseState->x = 0;
@@ -190,72 +106,19 @@ SView* swGetRootView(SWin_Win32_Window* window) {
 }
 
 SView* swCreateView(HWND parent, SRect* bounds) {
-	size_t len = sizeof(char) * (size_t)ceil(log10(viewID)) + 2;
+	size_t len = sizeof(char) * (size_t)ceil(log10(__sWin_Win32_viewID)) + 2;
 
 	char* viewIDStr = malloc(len);
 	memset(viewIDStr, 0, len);
 
-	sprintf(viewIDStr + 1, "%d", viewID);
+	sprintf(viewIDStr + 1, "%d", __sWin_Win32_viewID);
 
 	viewIDStr[0] = 'C';
 
 	WNDCLASSEX wc;
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.style = 0;
-	wc.lpfnWndProc = WndProc;
-	wc.cbClsExtra = 0;
-	wc.cbWndExtra = 0;
-	wc.hInstance = GetWindowLong(parent, GWL_HINSTANCE);
-	wc.hIcon = LoadIcon(NULL, IDI_WINLOGO);
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = CreateSolidBrush(RGB(0, 0, 0));
-	wc.lpszMenuName = NULL;
-	wc.lpszClassName = viewIDStr;
-	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
-
-	if (!RegisterClassEx(&wc)) {
-		MessageBox(NULL, "RegisterClassEx() failed", "Error", MB_OK);
-		printf("Problem!\n");
-		return;
-	}
-
-	RECT viewBounds;
-	GetClientRect(parent, &viewBounds);
-
-	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
-
-	HWND hWnd = CreateWindowEx(0, TEXT(viewIDStr),
-		(LPCTSTR)NULL,
-		WS_CHILD | WS_BORDER | WS_VISIBLE,
-		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
-		parent,
-		(HMENU)viewID,
-		GetWindowLong(parent, GWL_HINSTANCE),
-		NULL);
-
-	SetWindowLongPtr(hWnd, GWLP_USERDATA, GetWindowLongPtr(parent, GWLP_USERDATA));
-
-	viewID++;
-
-	return hWnd;
-}
-
-SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds, SOpenGLContextAttribs* attribs) {
-	SWin_Win32_OpenGLView* view = malloc(sizeof(SWin_Win32_OpenGLView));
-	
-	size_t len = sizeof(char) * (size_t)ceil(log10(viewID)) + 2;
-
-	char* viewIDStr = malloc(len);
-	memset(viewIDStr, 0, len);
-
-	sprintf(viewIDStr+1, "%d", viewID);
-
-	viewIDStr[0] = 'C';
-
-	WNDCLASSEX wc;
-	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.style = 0;
-	wc.lpfnWndProc = WndProc;
+	wc.lpfnWndProc = SWin_Win32_Thread_WndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = GetWindowLong(parent, GWL_HINSTANCE);
@@ -277,86 +140,20 @@ SOpenGLView* swCreateOpenGLView(HWND parent, SRect* bounds, SOpenGLContextAttrib
 
 	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
 
-	view->hWnd = CreateWindowEx(0, TEXT(viewIDStr),
+	HWND hWnd = CreateWindowEx(0, TEXT(viewIDStr),
 		(LPCTSTR)NULL,
 		WS_CHILD | WS_BORDER | WS_VISIBLE,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
 		parent,
-		(HMENU)viewID,
+		(HMENU)__sWin_Win32_viewID,
 		GetWindowLong(parent, GWL_HINSTANCE),
 		NULL);
 
-	viewID++;
+	SetWindowLongPtr(hWnd, GWLP_USERDATA, GetWindowLongPtr(parent, GWLP_USERDATA));
 
-	view->hDc = GetDC(view->hWnd);
+	__sWin_Win32_viewID++;
 
-	PIXELFORMATDESCRIPTOR pfd;
-
-	memset(&pfd, 0, sizeof(pfd));
-	pfd.nSize = sizeof(pfd);
-	pfd.nVersion = 1;
-	pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-	pfd.iPixelType = PFD_TYPE_RGBA;
-	pfd.cColorBits = 32;
-	pfd.cDepthBits = 32;
-
-	int pf = ChoosePixelFormat(view->hDc, &pfd);
-	if (pf == 0) {
-		MessageBox(NULL, "ChoosePixelFormat failed", "Error", MB_OK);
-		return NULL;
-	}
-
-	if (SetPixelFormat(view->hDc, pf, &pfd) == FALSE) {
-		MessageBox(NULL, "SetPixelFormat failed", "Error", MB_OK);
-		return NULL;
-	}
-
-	view->hRc = swin_win32_createContext(view->hDc);
-	
-	swin_win32_makecurrent(view->hDc, view->hRc);
-
-	PFNWGLCREATECONTEXTATTRIBSARBPROC pfnCreateContextAttribsARB = swGetProcAddress("wglCreateContextAttribsARB");
-	PFNWGLSWAPINTERVALEXTPROC pfnSwapIntervalEXT = swGetProcAddress("wglSwapIntervalEXT");
-
-	swin_win32_makecurrent(view->hDc, NULL);
-
-	int iContextAttribs[] =
-	{
-		WGL_CONTEXT_MAJOR_VERSION_ARB, attribs->major,
-		WGL_CONTEXT_MINOR_VERSION_ARB, attribs->minor,
-		WGL_CONTEXT_PROFILE_MASK_ARB, 1,
-		WGL_CONTEXT_FLAGS_ARB, attribs->debug ? 1 : 0,
-		0
-	};
-
-	view->hRc = pfnCreateContextAttribsARB(view->hDc, 0, iContextAttribs);
-
-	swin_win32_makecurrent(view->hDc, view->hRc);
-
-	pfnSwapIntervalEXT(attribs->swapInterval);
-
-	SetWindowLongPtr(view->hWnd, GWLP_USERDATA, (LONG_PTR)view);
-
-	SWin_Win32_RootPointer* root = GetWindowLongPtr(parent, GWLP_USERDATA);
-	view->root = root->window;
-
-	return view->hWnd;
-}
-
-void swMakeContextCurrent(HWND view) {
-	SWin_Win32_OpenGLView* glView = GetWindowLongPtr(view, GWLP_USERDATA);
-	swin_win32_makecurrent(glView->hDc, glView->hRc);
-}
-
-void swSwapBufers(HWND view) {
-	SWin_Win32_OpenGLView* glView = GetWindowLongPtr(view, GWLP_USERDATA);
-	SwapBuffers(glView->hDc);
-}
-
-void* swGetProcAddress(const char* name) {
-	void* result = swin_win32_getProcAddress(name);
-
-	return result == NULL ? GetProcAddress(libGL, name) : result;
+	return hWnd;
 }
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonCallback callback, void* userData) {
@@ -370,12 +167,12 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonC
 		WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
 		parent,
-		(HMENU)viewID, 
+		(HMENU)__sWin_Win32_viewID,
 		GetWindowLong(parent, GWL_HINSTANCE), NULL);
 
-	SendMessage(button, WM_SETFONT, font, TRUE);
+	SendMessage(button, WM_SETFONT, __sWin_Win32_font, TRUE);
 
-	viewID++;
+	__sWin_Win32_viewID++;
 
 	SWin_Win32_Button* buttonInfo = malloc(sizeof(SWin_Win32_Button));
 	buttonInfo->callback = callback;
@@ -395,15 +192,33 @@ SLabel* swCreateLabel(HWND parent, SRect* bounds, const char* text) {
 
 	HWND label = CreateWindow(
 		TEXT("STATIC"), TEXT(text),
-		WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON | WS_BORDER,
+		WS_VISIBLE | WS_CHILD | WS_BORDER,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
 		parent,
-		(HMENU)viewID,
+		(HMENU)__sWin_Win32_viewID,
 		GetWindowLong(parent, GWL_HINSTANCE), NULL);
 
-	SendMessage(label, WM_SETFONT, font, TRUE);
+	SendMessage(label, WM_SETFONT, __sWin_Win32_font, TRUE);
 
-	viewID++;
+	//HWND cWnd = capCreateCaptureWindowA("", WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 0, 0, 1000, 620, parent, 0);
+	//if (!SendMessage(cWnd, WM_USER + 10, devId, NULL) != NULL) {
+	//	SendMessage(cWnd, WM_CAP_SET_SCALE, 1, Nothing)
+	//		SendMessage(cWnd, WM_CAP_SET_PREVIEWRATE, 66, Nothing)
+	//		SendMessage(cWnd, WM_CAP_SET_PREVIEW, 1, Nothing)
+	//}
+	//else {
+		//MessageBox.Show("Error connecting to capture device. Make sure your WebCam is connected and try again.");
+	//}
+
+	//SetWindowText(label, L"Text Override");
+
+	//SetWindowPos(label, HWND_TOP, bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height, 0);
+
+	BringWindowToTop(label);
+
+	//SetForegroundWindow(label);
+
+	__sWin_Win32_viewID++;
 
 	return label;
 }
@@ -419,12 +234,12 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
 		WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
 		parent,
-		(HMENU)viewID,
+		(HMENU)__sWin_Win32_viewID,
 		GetWindowLong(parent, GWL_HINSTANCE), NULL);
 
-	SendMessage(textField, WM_SETFONT, font, TRUE);
+	SendMessage(textField, WM_SETFONT, __sWin_Win32_font, TRUE);
 
-	viewID++;
+	__sWin_Win32_viewID++;
 
 	return textField;
 }
@@ -444,27 +259,11 @@ char* swGetTextFromTextField(STextField* textField) {
 	return buffer;
 }
 
-double swGetTime() {
-	uint64_t value;
-
-	QueryPerformanceCounter((LARGE_INTEGER*)&value);
-
-	double result = (double)value;
-
-	result = result / __sWin_Win32_Time.frequency;
-
-	return result;
-}
-
-void swTerminate() {
-	
-}
-
 SMouseState* swGetMouseState(SWin_Win32_Window* window) {
 	return window->mouseState;
 }
 
-inline LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+inline LRESULT CALLBACK SWin_Win32_Thread_WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT ps;
 	HDC hdc;
 
@@ -473,6 +272,9 @@ inline LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 
 	if (root != NULL) {
 		window = root->window;;
+	}
+	else {
+		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
 	if (message == WM_PAINT) {

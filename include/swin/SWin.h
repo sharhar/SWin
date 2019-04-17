@@ -5,10 +5,11 @@
 
 typedef void SWindow;
 typedef void SView;
-typedef void SOpenGLView;
+typedef void SOpenGLContext;
 typedef void SButton;
 typedef void SLabel;
 typedef void STextField;
+typedef void SThread;
 
 typedef struct SRect {
     float x, y, width, height;
@@ -27,7 +28,10 @@ typedef struct SOpenGLContextAttribs {
 	int swapInterval;
 } SOpenGLContextAttribs;
 
+typedef int32_t(*pfnSThreadCallback)(void* data);
+
 void swInit();
+void swInitGL();
 
 SWindow* swCreateWindow(int width, int height, const char* title);
 
@@ -41,9 +45,10 @@ SView* swGetRootView(SWindow* window);
 
 SView* swCreateView(SView* parent, SRect* bounds);
 
-SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds, SOpenGLContextAttribs* attribs);
-void swMakeContextCurrent(SOpenGLView* view);
-void swSwapBufers(SOpenGLView* view);
+//SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds, SOpenGLContextAttribs* attribs);
+SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attribs);
+void swMakeContextCurrent(SOpenGLContext* context);
+void swSwapBufers(SOpenGLContext* context);
 
 void* swGetProcAddress(const char* name);
 
@@ -55,12 +60,19 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text);
 
 char* swGetTextFromTextField(STextField* textField);
 
+void swPopup(char* title, char* text);
+
 double swGetTime();
+void swSleep(uint32_t milliSeconds);
 
 SRect* swMakeRect(float x, float y, float w, float h);
 
 void swTerminate();
 
 SMouseState* swGetMouseState(SWindow* window);
+
+SThread* swCreateThread(pfnSThreadCallback callback, void* data);
+void swWaitForThread(SThread* thread);
+void swDeleteThread(SThread* thread);
 
 #endif
