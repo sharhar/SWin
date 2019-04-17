@@ -18,7 +18,7 @@ typedef struct SRect {
 typedef struct SMouseState {
 	float x, y;
 	uint8_t ldown;
-	int32_t scroll;
+	float scroll;
 } SMouseState;
 
 typedef struct SOpenGLContextAttribs {
