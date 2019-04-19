@@ -32,6 +32,7 @@ typedef int32_t(*pfnSThreadCallback)(void* data);
 
 void swInit();
 void swInitGL();
+void swInitVK();
 
 SWindow* swCreateWindow(int width, int height, const char* title);
 
@@ -45,12 +46,13 @@ SView* swGetRootView(SWindow* window);
 
 SView* swCreateView(SView* parent, SRect* bounds);
 
-//SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds, SOpenGLContextAttribs* attribs);
 SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attribs);
 void swMakeContextCurrent(SOpenGLContext* context);
 void swSwapBufers(SOpenGLContext* context);
+void* swGetProcAddressGL(const char* name);
 
-void* swGetProcAddress(const char* name);
+void* swGetProcAddressVK(const char* name);
+char** swGetRequiredExtensionsVK(uint32_t* count);
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData);
 

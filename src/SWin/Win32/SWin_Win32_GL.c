@@ -13,13 +13,13 @@ typedef HGLRC(WINAPI * PFNWGLCREATECONTEXT)(HDC hdc);
 typedef BOOL(WINAPI * PFNWGLMAKECURRENT)(HDC hdc, HGLRC hglrc);
 typedef PROC(WINAPI * PFNWGLGETPROCADDRESS)(LPCSTR lpszProc);
 
+HMODULE __sWin_Win32_libGL;
+
 PFNWGLCREATECONTEXT __sWin_Win32_wglCreateContext;
 PFNWGLMAKECURRENT __sWin_Win32_wglMakecurrent;
 PFNWGLGETPROCADDRESS __sWin_Win32_wglGetProcAddress;
 PFNWGLCREATECONTEXTATTRIBSARBPROC __sWin_Win32_wglCreateContextAttribsARB;
 PFNWGLSWAPINTERVALEXTPROC __sWin_Win32_wglSwapIntervalEXT;
-
-HMODULE __sWin_Win32_libGL;
 
 void swInitGL() {
 	__sWin_Win32_libGL = LoadLibraryW(L"opengl32.dll");
@@ -61,8 +61,8 @@ SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attrib
 
 	__sWin_Win32_wglMakecurrent(result->hDc, result->hRc);
 
-	__sWin_Win32_wglCreateContextAttribsARB = swGetProcAddress("wglCreateContextAttribsARB");
-	__sWin_Win32_wglSwapIntervalEXT = swGetProcAddress("wglSwapIntervalEXT");
+	__sWin_Win32_wglCreateContextAttribsARB = swGetProcAddressGL("wglCreateContextAttribsARB");
+	__sWin_Win32_wglSwapIntervalEXT = swGetProcAddressGL("wglSwapIntervalEXT");
 
 	__sWin_Win32_wglMakecurrent(result->hDc, NULL);
 
@@ -94,7 +94,7 @@ void swSwapBufers(SOpenGLContext* view) {
 	SwapBuffers(context->hDc);
 }
 
-void* swGetProcAddress(const char* name) {
+void* swGetProcAddressGL(const char* name) {
 	void* result = __sWin_Win32_wglGetProcAddress(name);
 
 	return result == NULL ? GetProcAddress(__sWin_Win32_libGL, name) : result;
