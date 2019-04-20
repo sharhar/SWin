@@ -51,8 +51,9 @@ void swMakeContextCurrent(SOpenGLContext* context);
 void swSwapBufers(SOpenGLContext* context);
 void* swGetProcAddressGL(const char* name);
 
-void* swGetProcAddressVK(const char* name);
+void* swGetProcAddressVK(void* instance, const char* name);
 char** swGetRequiredExtensionsVK(uint32_t* count);
+int32_t swCreateWindowSurfaceVK(void* instance, SView* view, void* allocator, void* surface);
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData);
 
