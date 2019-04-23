@@ -10,6 +10,7 @@ typedef void SButton;
 typedef void SLabel;
 typedef void STextField;
 typedef void SThread;
+typedef void SMutex;
 
 typedef struct SRect {
     float x, y, width, height;
@@ -91,5 +92,10 @@ SMouseState* swGetMouseState(SWindow* window);
 SThread* swCreateThread(pfnSThreadCallback callback, void* data);
 void swWaitForThread(SThread* thread);
 void swDestroyThread(SThread* thread);
+
+SMutex* swCreateMutex();
+void swLockMutex(SMutex* mutex);
+void swUnlockMutex(SMutex* mutex);
+void swDestroyMutex(SMutex* mutex);
 
 #endif

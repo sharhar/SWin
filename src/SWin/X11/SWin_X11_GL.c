@@ -57,13 +57,11 @@ static int __sWin_X11_ctxErrorHandler( Display *dpy, XErrorEvent *ev ) {
 SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attribs) {
 	SWin_X11_OpenGLContext* result = (SWin_X11_OpenGLContext*)malloc(sizeof(SWin_X11_OpenGLContext));
 
-
-
 	int visual_attribs[] = {
 			GLX_X_RENDERABLE    , True,
 			GLX_DRAWABLE_TYPE   , GLX_WINDOW_BIT,
 			GLX_RENDER_TYPE     , GLX_RGBA_BIT,
-			GLX_X_VISUAL_TYPE   , GLX_TRUE_COLOR,
+			//GLX_X_VISUAL_TYPE   , GLX_TRUE_COLOR,
 			GLX_RED_SIZE        , 8,
 			GLX_GREEN_SIZE      , 8,
 			GLX_BLUE_SIZE       , 8,
@@ -76,8 +74,12 @@ SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attrib
 			None
 	};
 
+
+
 	int fbcCount = 0;
 	GLXFBConfig* nativeConfigs = __sWin_X11_glXChooseFBConfig(__sWin_X11_display, __sWin_X11_screen, visual_attribs, &fbcCount);
+
+	XLockDisplay(__sWin_X11_display);
 
 	__sWin_X11_ctxErrorOccurred = False;
 	int (*oldHandler)(Display*, XErrorEvent*) =
@@ -141,6 +143,8 @@ SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attrib
 		printf( "Failed to create an OpenGL context\n" );
 		return NULL;
 	}
+
+	XUnlockDisplay(__sWin_X11_display);
 
 	result->drawable = result->window;
 

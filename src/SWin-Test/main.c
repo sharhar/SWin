@@ -37,11 +37,14 @@ void buttonCallback(STextField* textField) {
 }
 
 uint8_t running = 1;
+uint8_t fence = 0;
+SMutex* mutex = NULL;
 
 typedef struct RenderInfo {
 	SView* view;
 	float rotDir;
 	float r, g, b;
+	int ID;
 } RenderInfo;
 
 void renderFunction(RenderInfo* info) {
@@ -53,11 +56,17 @@ void renderFunction(RenderInfo* info) {
 	attribs.forwardCompat = 1;
 	attribs.profile = SWIN_OPENGL_CONTEXT_PROFILE_COMPATIBILITY;
 
+	swLockMutex(mutex);
+
+	swSleep(20);
+
 	SOpenGLContext* context = swCreateOpenGLContext(info->view, &attribs);
 
 	swMakeContextCurrent(context);
 
 	printf("GL Version: %s\n", __glGetString(GL_VERSION));
+
+	swUnlockMutex(mutex);
 
 	__glViewport(0, 0, 300, 300);
 
@@ -134,24 +143,30 @@ int main(int argc, const char * argv[]) {
 	renderInfos[0].r = 0;
 	renderInfos[0].g = 0;
 	renderInfos[0].b = 0;
+	renderInfos[0].ID = 0;
 
 	renderInfos[1].view = glView2;
 	renderInfos[1].rotDir = -1;
 	renderInfos[1].r = 1;
 	renderInfos[1].g = 1;
 	renderInfos[1].b = 1;
+	renderInfos[1].ID = 1;
 
 	renderInfos[2].view = glView3;
 	renderInfos[2].rotDir = -1;
 	renderInfos[2].r = 1;
 	renderInfos[2].g = 1;
 	renderInfos[2].b = 1;
+	renderInfos[2].ID = 2;
 
 	renderInfos[3].view = glView4;
 	renderInfos[3].rotDir = 1;
 	renderInfos[3].r = 0;
 	renderInfos[3].g = 0;
 	renderInfos[3].b = 0;
+	renderInfos[3].ID = 3;
+
+	mutex = swCreateMutex();
 
 	SThread* thread1 = swCreateThread(renderFunction, renderInfos);
 	SThread* thread2 = swCreateThread(renderFunction, renderInfos+1);
@@ -192,6 +207,11 @@ int main(int argc, const char * argv[]) {
 	swWaitForThread(thread2);
 	swWaitForThread(thread3);
 	swWaitForThread(thread4);
+
+	swDestroyThread(thread1);
+	swDestroyThread(thread2);
+	swDestroyThread(thread3);
+	swDestroyThread(thread4);
 
 	swDestroyWindow(window);
     

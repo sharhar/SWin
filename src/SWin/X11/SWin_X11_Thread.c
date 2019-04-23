@@ -6,8 +6,16 @@ typedef struct SWin_X11_Thread {
 	pthread_t thread;
 } SWin_X11_Thread;
 
+typedef struct SWin_X11_Mutex {
+	pthread_mutex_t mutex;
+	pthread_mutexattr_t attr;
+} SWin_X11_Mutex;
+
 void* SWin_X11_Thread_ThreadFunction(void* data) {
 	void** datas = (void**)data;
+
+	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+	pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
 	pfnSThreadCallback callback = (pfnSThreadCallback)datas[0];
 
@@ -36,4 +44,28 @@ void swWaitForThread(SThread* thread) {
 
 void swDestroyThread(SThread* thread) {
 	pthread_cancel(((SWin_X11_Thread*)thread)->thread);
+
+}
+
+SMutex* swCreateMutex() {
+	SWin_X11_Mutex* result = (SWin_X11_Mutex*)malloc(sizeof(SWin_X11_Mutex));
+	memset(result, 0, sizeof(SWin_X11_Mutex));
+
+	pthread_mutexattr_init(&result->attr);
+	pthread_mutexattr_settype(&result->attr, PTHREAD_MUTEX_RECURSIVE);
+	pthread_mutex_init(&result->mutex, &result->attr);
+
+	return result;
+}
+
+void swLockMutex(SMutex* mutex) {
+	pthread_mutex_lock(&((SWin_X11_Mutex*)mutex)->mutex);
+}
+
+void swUnlockMutex(SMutex* mutex) {
+	pthread_mutex_unlock(&((SWin_X11_Mutex*)mutex)->mutex);
+}
+
+void swDestroyMutex(SMutex* mutex) {
+	pthread_mutex_destroy(&((SWin_X11_Mutex*)mutex)->mutex);
 }
