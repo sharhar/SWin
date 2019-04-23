@@ -51,7 +51,7 @@ void swPollEvents();
 void swDraw(SWindow* window);
 uint8_t swCloseRequested(SWindow* window);
 
-void swCloseWindow(SWindow* window);
+void swDestroyWindow(SWindow* window);
 
 SView* swGetRootView(SWindow* window);
 
@@ -90,6 +90,6 @@ SMouseState* swGetMouseState(SWindow* window);
 
 SThread* swCreateThread(pfnSThreadCallback callback, void* data);
 void swWaitForThread(SThread* thread);
-void swDeleteThread(SThread* thread);
+void swDestroyThread(SThread* thread);
 
 #endif

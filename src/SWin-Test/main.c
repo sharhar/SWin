@@ -29,6 +29,8 @@ typedef void (pfnglprefunc PFNGLVERTEX2FPROC)(float x, float y);
 PFNGLVERTEX2FPROC __glVertex2f;
 typedef const char* (pfnglprefunc PFNGLGETSTRINGPROC)(unsigned int name);
 PFNGLGETSTRINGPROC __glGetString;
+typedef void (pfnglprefunc PFNGLROTATEFPROC)( float angle, float x, float y, float z );
+PFNGLROTATEFPROC __glRotatef;
 
 void buttonCallback(STextField* textField) {
     //printf("%s\n", swGetTextFromTextField(textField));
@@ -74,9 +76,7 @@ int main(int argc, const char * argv[]) {
     SView* vkView = swCreateView(rootView, swMakeRect(10, 10, 370, 370));
 
 	SLabel* label = swCreateLabel(rootView, swMakeRect(10, 390, 100, 100), "Hello, world!");
-	
-    double startTime = swGetTime();
-    */
+	*/
 
 	//GL Init
     swMakeContextCurrent(context);
@@ -89,6 +89,7 @@ int main(int argc, const char * argv[]) {
 	__glVertex2f = swGetProcAddressGL("glVertex2f");
 	__glEnd = swGetProcAddressGL("glEnd");
 	__glGetString = swGetProcAddressGL("glGetString");
+	__glRotatef = swGetProcAddressGL("glRotatef");
 
 	printf("GL Version: %s\n", __glGetString(GL_VERSION));
 
@@ -100,12 +101,12 @@ int main(int argc, const char * argv[]) {
     __glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
 
 	//Swin_Vk* vkContext = initVk(vkView);
-    
-    while (!swCloseRequested(window)) {
-        swPollEvents();
 
-        /*
-        double currentTime = swGetTime();
+	double startTime = swGetTime();
+	double currentTime = 0;
+
+    while (!swCloseRequested(window)) {
+       currentTime = swGetTime();
         
         frames++;
         if(currentTime - startTime >= 1) {
@@ -114,9 +115,10 @@ int main(int argc, const char * argv[]) {
             frames = 0;
             printf("%d\n", fps);
         }
-         */
 
-        swSleep(1);
+        swPollEvents();
+
+	    __glRotatef(1, 0, 0, 1);
 
 		__glClear(GL_COLOR_BUFFER_BIT);
         
@@ -135,8 +137,9 @@ int main(int argc, const char * argv[]) {
 
 		swDraw(window);
     }
-    
-    swCloseWindow(window);
+
+    swDestroyOpenGLContext(context);
+	swDestroyWindow(window);
     
     return 0;
 }

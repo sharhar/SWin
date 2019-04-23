@@ -2,30 +2,9 @@
 #include "../../../include/swin/SWin_X11.h"
 
 XEvent __sWin_X11_event;
-KeySym key;
-char text[255];
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
     SWin_X11_Window* result = (SWin_X11_Window*)malloc(sizeof(SWin_X11_Window));
-
-
-
-    XSetWindowAttributes attributes;
-    attributes.background_pixmap = None;
-    attributes.background_pixel = __sWin_X11_black;
-    attributes.border_pixmap = CopyFromParent;
-    attributes.border_pixel = __sWin_X11_black;
-    attributes.bit_gravity = ForgetGravity;
-    attributes.win_gravity = NorthWestGravity;
-    attributes.backing_store = NotUseful;
-    attributes.backing_planes = 0;
-    attributes.backing_pixel = 0;
-    attributes.save_under = False;
-    attributes.event_mask = StructureNotifyMask;
-    attributes.do_not_propagate_mask = 0;
-    attributes.override_redirect = False;
-    attributes.colormap = CopyFromParent;
-    attributes.cursor = None;
 
     result->visual = DefaultVisual(__sWin_X11_display, __sWin_X11_screen);
 
@@ -70,10 +49,8 @@ void swSetViewBackgroundColor(SView* view, SColor color) {
     ((SWin_X11_View*)view)->bg.a = color.a;
 }
 
-void _swDrawViewBackground(SWin_X11_View* view) {
+void __sWin_X11_swDrawViewBackground(SWin_X11_View* view) {
 	if(view->bg.a > 0.5f) {
-		printf("view = %p\n", view);
-
 		XColor xcolour;
 
 		xcolour.red = (unsigned short)(view->bg.r * (256*256-1));
@@ -86,7 +63,7 @@ void _swDrawViewBackground(SWin_X11_View* view) {
 		XFillRectangle(__sWin_X11_display, view->window, view->gc, 0, 0, view->width, view->height);
 
 		for(int i = 0; i < view->childCount;i++) {
-			_swDrawViewBackground(view->children[i]);
+			__sWin_X11_swDrawViewBackground(view->children[i]);
 		}
 	}
 }
@@ -105,29 +82,25 @@ void swPollEvents() {
 		}
 
 		if (__sWin_X11_event.type == Expose && __sWin_X11_event.xexpose.count == 0) {
-			/* the window was exposed redraw it! */
-			//XDrawString(dpy,win,gc,x,y, string, strlen(string));
 			SWin_X11_View *view = NULL;
 			XFindContext(__sWin_X11_display, __sWin_X11_event.xany.window, __sWin_X11_context, (XPointer *) &view);
-			//_swDrawViewBackground(view);
+			__sWin_X11_swDrawViewBackground(view);
 		}
 
-		if (__sWin_X11_event.type == KeyPress &&
-		    XLookupString(&__sWin_X11_event.xkey, text, 255, &key, 0) == 1) {
-			/* use the XLookupString routine to convert the invent
-			   KeyPress data into regular text.  Weird but necessary...
-			*/
-			if (text[0] == 'q') {
+		//KeySym key;
+		//char text[255];
 
-			}
-			printf("You pressed the %c key!\n", text[0]);
-		}
+		//if (__sWin_X11_event.type == KeyPress && XLookupString(&__sWin_X11_event.xkey, text, 255, &key, 0) == 1) {
+		//	printf("You pressed the %c key!\n", text[0]);
+		//}
 
-		if (__sWin_X11_event.type == ButtonPress) {
-			/* tell where the mouse Button was Pressed */
-			printf("You pressed a button at (%i,%i) in window %p\n",
-			       __sWin_X11_event.xbutton.x, __sWin_X11_event.xbutton.y, __sWin_X11_event.xany.window);
-		}
+		//if (__sWin_X11_event.type == KeyRelease && XLookupString(&__sWin_X11_event.xkey, text, 255, &key, 0) == 1) {
+		//	printf("You released the %c key!\n", text[0]);
+		//}
+
+		//if (__sWin_X11_event.type == ButtonPress) {
+		//	printf("You pressed a button at (%i,%i) in window %p\n", __sWin_X11_event.xbutton.x, __sWin_X11_event.xbutton.y, __sWin_X11_event.xany.window);
+		//}
 	}
 }
 
@@ -139,7 +112,7 @@ uint8_t swCloseRequested(SWindow* window) {
     return ((SWin_X11_Window*)window)->closeRequested;
 }
 
-void swCloseWindow(SWindow* window) {
+void swDestroyWindow(SWindow* window) {
     XFreeGC(__sWin_X11_display, ((SWin_X11_Window*)window)->view.gc);
     XDestroyWindow(__sWin_X11_display, ((SWin_X11_Window*)window)->view.window);
 }

@@ -1,16 +1,16 @@
 #include "../../../include/swin/SWin.h"
 #include "../../../include/swin/SWin_X11.h"
 
+#include <GL/gl.h>
 #include <GL/glx.h>
 
 void* __sWin_X11_libGL;
 
-typedef void (*PFNGLXSWAPBUFFERSPROC)( Display *dpy, GLXDrawable drawable );
-typedef void (*PFNGLXDESTROYCONTEXTPROC)( Display *dpy, GLXContext ctx );
+typedef void (*PFNGLXSWAPBUFFERSPROC)(Display *dpy, GLXDrawable drawable);
+typedef void (*PFNGLXDESTROYCONTEXTPROC)(Display *dpy, GLXContext ctx);
 
 PFNGLXGETPROCADDRESSPROC __sWin_X11_glxGetProcAddressARB;
 PFNGLXCHOOSEFBCONFIGPROC __sWin_X11_glXChooseFBConfig;
-PFNGLXGETFBCONFIGATTRIBPROC __sWin_X11_glXGetFBConfigAttrib;
 PFNGLXCREATENEWCONTEXTPROC __sWin_X11_glXCreateNewContext;
 PFNGLXCREATEWINDOWPROC __sWin_X11_glXCreateWindow;
 PFNGLXDESTROYWINDOWPROC __sWin_X11_glXDestroyWindow;
@@ -22,7 +22,7 @@ PFNGLXDESTROYCONTEXTPROC __sWin_X11_glXDestroyContext;
 
 typedef struct SWin_X11_OpenGLContext {
 	GLXContext context;
-	GLXWindow glxwindow;
+	GLXWindow window;
 	GLXDrawable drawable;
 } SWin_X11_OpenGLContext;
 
@@ -39,7 +39,6 @@ void swInitGL() {
 
     __sWin_X11_glxGetProcAddressARB = (PFNGLXGETPROCADDRESSPROC)dlsym(__sWin_X11_libGL, "glXGetProcAddressARB");
 	__sWin_X11_glXChooseFBConfig = __sWin_X11_glxGetProcAddressARB("glXChooseFBConfig");
-	__sWin_X11_glXGetFBConfigAttrib = __sWin_X11_glxGetProcAddressARB("glXGetFBConfigAttrib");
 	__sWin_X11_glXCreateNewContext = __sWin_X11_glxGetProcAddressARB("glXCreateNewContext");
 	__sWin_X11_glXCreateWindow = __sWin_X11_glxGetProcAddressARB("glXCreateWindow");
 	__sWin_X11_glXDestroyWindow = __sWin_X11_glxGetProcAddressARB("glXDestroyWindow");
@@ -49,24 +48,16 @@ void swInitGL() {
 	__sWin_X11_glXDestroyContext = __sWin_X11_glxGetProcAddressARB("glXDestroyContext");
 }
 
-static Bool ctxErrorOccurred = False;
-static int ctxErrorHandler( Display *dpy, XErrorEvent *ev ) {
-	ctxErrorOccurred = True;
+static Bool __sWin_X11_ctxErrorOccurred = False;
+static int __sWin_X11_ctxErrorHandler( Display *dpy, XErrorEvent *ev ) {
+	__sWin_X11_ctxErrorOccurred = True;
 	return 0;
-}
-
-static int getGLXFBConfigAttrib(GLXFBConfig fbconfig, int attrib) {
-	int value;
-	__sWin_X11_glXGetFBConfigAttrib(__sWin_X11_display, fbconfig, attrib, &value);
-	return value;
 }
 
 SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attribs) {
 	SWin_X11_OpenGLContext* result = (SWin_X11_OpenGLContext*)malloc(sizeof(SWin_X11_OpenGLContext));
 
-	int attribs_list[40];
-	GLXFBConfig native = NULL;
-	GLXFBConfig* nativeConfigs;
+
 
 	int visual_attribs[] = {
 			GLX_X_RENDERABLE    , True,
@@ -86,17 +77,14 @@ SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attrib
 	};
 
 	int fbcCount = 0;
-	nativeConfigs = __sWin_X11_glXChooseFBConfig(__sWin_X11_display, __sWin_X11_screen, visual_attribs, &fbcCount);
+	GLXFBConfig* nativeConfigs = __sWin_X11_glXChooseFBConfig(__sWin_X11_display, __sWin_X11_screen, visual_attribs, &fbcCount);
 
-	ctxErrorOccurred = False;
+	__sWin_X11_ctxErrorOccurred = False;
 	int (*oldHandler)(Display*, XErrorEvent*) =
-	XSetErrorHandler(&ctxErrorHandler);
+	XSetErrorHandler(&__sWin_X11_ctxErrorHandler);
 
-	for(int i = 0; i < fbcCount; ++i)
-	{
-		native = nativeConfigs[i];
-
-		ctxErrorOccurred = False;
+	for(int i = 0; i < fbcCount; ++i) {
+		__sWin_X11_ctxErrorOccurred = False;
 		XSync(__sWin_X11_display, False);
 
 		if (__sWin_X11_glXCreateContextAttribsARB) {
@@ -116,51 +104,45 @@ SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attrib
 				flags |= GLX_CONTEXT_DEBUG_BIT_ARB;
 			}
 
-			attribs_list[0] = GLX_CONTEXT_MAJOR_VERSION_ARB;
-			attribs_list[1] = attribs->major;
+			int attribs_list[] = {
+					GLX_CONTEXT_MAJOR_VERSION_ARB, attribs->major,
+					GLX_CONTEXT_MINOR_VERSION_ARB, attribs->minor,
+					GLX_CONTEXT_PROFILE_MASK_ARB, mask,
+					GLX_CONTEXT_FLAGS_ARB, flags,
+					None
+			};
 
-			attribs_list[2] = GLX_CONTEXT_MINOR_VERSION_ARB;
-			attribs_list[3] = attribs->minor;
-
-			attribs_list[4] = GLX_CONTEXT_PROFILE_MASK_ARB;
-			attribs_list[5] = mask;
-
-			attribs_list[6] = GLX_CONTEXT_FLAGS_ARB;
-			attribs_list[7] = flags;
-
-			attribs_list[8] = None;
-
-			result->context = __sWin_X11_glXCreateContextAttribsARB(__sWin_X11_display, native, NULL, True, attribs_list);
+			result->context = __sWin_X11_glXCreateContextAttribsARB(__sWin_X11_display, nativeConfigs[i], NULL, True, attribs_list);
 
 			if (!result->context) {
 				printf("glXCreateContextAttribsARB failed, using glXCreateNewContext\n");
-				result->context = __sWin_X11_glXCreateNewContext(__sWin_X11_display, native, GLX_RGBA_TYPE, NULL, True);
+				result->context = __sWin_X11_glXCreateNewContext(__sWin_X11_display, nativeConfigs[i], GLX_RGBA_TYPE, NULL, True);
 			}
 		}
 		else
 		{
-			result->context = __sWin_X11_glXCreateNewContext(__sWin_X11_display, native, GLX_RGBA_TYPE, NULL, True);
+			result->context = __sWin_X11_glXCreateNewContext(__sWin_X11_display, nativeConfigs[i], GLX_RGBA_TYPE, NULL, True);
 		}
 
-		result->glxwindow = __sWin_X11_glXCreateWindow(__sWin_X11_display, native, ((SWin_X11_View*)view)->window, NULL);
+		result->window = __sWin_X11_glXCreateWindow(__sWin_X11_display, nativeConfigs[i], ((SWin_X11_View*)view)->window, NULL);
 
 		XSync(__sWin_X11_display, False);
 
-		if(!ctxErrorOccurred) {
+		if(!__sWin_X11_ctxErrorOccurred) {
 			break;
 		}
 
 		__sWin_X11_glXDestroyContext(__sWin_X11_display, result->context);
 	}
 
-	XSetErrorHandler( oldHandler );
+	XSetErrorHandler(oldHandler);
 
-	if ( ctxErrorOccurred || !result->context ) {
+	if ( __sWin_X11_ctxErrorOccurred || !result->context ) {
 		printf( "Failed to create an OpenGL context\n" );
 		return NULL;
 	}
 
-	result->drawable = result->glxwindow;
+	result->drawable = result->window;
 
 	return result;
 }
@@ -180,6 +162,6 @@ void* swGetProcAddressGL(const char* name) {
 }
 
 void swDestroyOpenGLContext(SOpenGLContext* context) {
-	__sWin_X11_glXDestroyWindow(__sWin_X11_display, ((SWin_X11_OpenGLContext*)context)->glxwindow);
+	__sWin_X11_glXDestroyWindow(__sWin_X11_display, ((SWin_X11_OpenGLContext*)context)->window);
 	__sWin_X11_glXDestroyContext(__sWin_X11_display, ((SWin_X11_OpenGLContext*)context)->context);
 }
