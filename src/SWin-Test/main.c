@@ -1,7 +1,7 @@
 #include <swin/SWin.h>
 #include <stdio.h>
 
-//#define SWIN_TEST_VULKAN
+#define SWIN_TEST_VULKAN
 
 #define GL_VERSION 0x1F02
 #define GL_COLOR_BUFFER_BIT 0x00004000
@@ -58,7 +58,7 @@ void renderFunction(RenderInfo* info) {
 
 	swLockMutex(mutex);
 
-	swSleep(20);
+	swSleep(250);
 
 	SOpenGLContext* context = swCreateOpenGLContext(info->view, &attribs);
 
@@ -119,11 +119,11 @@ int main(int argc, const char * argv[]) {
 	STextField* textField = swCreateTextField(rootView, swMakeRect(10, 580, 285, 30), "text");
 
     SButton* button = swCreateButton(rootView, swMakeRect(305, 580, 75, 30), "Submit", &buttonCallback, textField);
-    
-    SView* vkView = swCreateView(rootView, swMakeRect(10, 10, 370, 370));
 
 	SLabel* label = swCreateLabel(rootView, swMakeRect(10, 390, 100, 100), "Hello, world!");
 	*/
+
+	SView* vkView = swCreateView(rootView, swMakeRect(10, 10, 360, 360));
 
 	__glClear = swGetProcAddressGL("glClear");
 	__glClearColor = swGetProcAddressGL("glClearColor");
@@ -176,7 +176,7 @@ int main(int argc, const char * argv[]) {
     uint32_t frames = 0;
     uint32_t fps = 0;
 
-	//Swin_Vk* vkContext = initVk(vkView);
+	Swin_Vk* vkContext = initVk(vkView);
 
 	double startTime = swGetTime();
 	double currentTime = 0;
@@ -196,7 +196,7 @@ int main(int argc, const char * argv[]) {
 
         swSleep(10);
 
-		//renderVk(vkContext);
+		renderVk(vkContext);
 
 		swDraw(window);
     }
@@ -230,6 +230,7 @@ void renderVk(Swin_Vk* ctx) {
 
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
+#include <malloc.h>
 
 typedef struct ContextVK {
 	VkInstance instance;
