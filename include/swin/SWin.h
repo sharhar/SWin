@@ -21,12 +21,23 @@ typedef struct SMouseState {
 	float scroll;
 } SMouseState;
 
+typedef enum SOpenGLContextProfile {
+	SWIN_OPENGL_CONTEXT_PROFILE_CORE = 1,
+	SWIN_OPENGL_CONTEXT_PROFILE_COMPATIBILITY = 2
+}SOpenGLContextProfile;
+
 typedef struct SOpenGLContextAttribs {
 	int major;
 	int minor;
 	int debug;
+	int forwardCompat;
+	SOpenGLContextProfile profile;
 	int swapInterval;
 } SOpenGLContextAttribs;
+
+typedef struct SColor {
+    float r, g, b, a;
+} SColor;
 
 typedef int32_t(*pfnSThreadCallback)(void* data);
 
@@ -38,7 +49,7 @@ SWindow* swCreateWindow(int width, int height, const char* title);
 
 void swPollEvents();
 void swDraw(SWindow* window);
-uint8_t swCloseRequested(SWindow* swin);
+uint8_t swCloseRequested(SWindow* window);
 
 void swCloseWindow(SWindow* window);
 
@@ -46,10 +57,13 @@ SView* swGetRootView(SWindow* window);
 
 SView* swCreateView(SView* parent, SRect* bounds);
 
+void swSetViewBackgroundColor(SView* view, SColor color);
+
 SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attribs);
 void swMakeContextCurrent(SOpenGLContext* context);
 void swSwapBufers(SOpenGLContext* context);
 void* swGetProcAddressGL(const char* name);
+void swDestroyOpenGLContext(SOpenGLContext* context);
 
 void* swGetProcAddressVK(void* instance, const char* name);
 char** swGetRequiredExtensionsVK(uint32_t* count);

@@ -1,7 +1,7 @@
 #include <swin/SWin.h>
 #include <stdio.h>
 
-#define SWIN_TEST_VULKAN
+//#define SWIN_TEST_VULKAN
 
 #define GL_VERSION 0x1F02
 #define GL_COLOR_BUFFER_BIT 0x00004000
@@ -31,7 +31,7 @@ typedef const char* (pfnglprefunc PFNGLGETSTRINGPROC)(unsigned int name);
 PFNGLGETSTRINGPROC __glGetString;
 
 void buttonCallback(STextField* textField) {
-    printf("%s\n", swGetTextFromTextField(textField));
+    //printf("%s\n", swGetTextFromTextField(textField));
 }
 
 typedef void Swin_Vk;
@@ -44,17 +44,29 @@ int main(int argc, const char * argv[]) {
 	swInitGL();
 
     SWindow* window = swCreateWindow(1000, 620, "UI Test");
+
+    SColor winBG = {1,1,1,1};
+    SColor glBG = {0,0,0,0};
+
     SView* rootView = swGetRootView(window);
+
+    swSetViewBackgroundColor(rootView, winBG);
     
 	SOpenGLContextAttribs attribs;
-	attribs.major = 2;
-	attribs.minor = 1;
-	attribs.debug = 0;
+	attribs.major = 3;
+	attribs.minor = 3;
+	attribs.debug = 1;
 	attribs.swapInterval = 1;
+	attribs.forwardCompat = 1;
+	attribs.profile = SWIN_OPENGL_CONTEXT_PROFILE_COMPATIBILITY;
 
 	SView* glView = swCreateView(rootView, swMakeRect(390, 10, 600, 600));
-    SOpenGLContext* context = swCreateOpenGLContext(glView, &attribs);
-    
+
+    swSetViewBackgroundColor(glView, glBG);
+
+	SOpenGLContext* context = swCreateOpenGLContext(glView, &attribs);
+
+	/*
 	STextField* textField = swCreateTextField(rootView, swMakeRect(10, 580, 285, 30), "text");
 
     SButton* button = swCreateButton(rootView, swMakeRect(305, 580, 75, 30), "Submit", &buttonCallback, textField);
@@ -64,7 +76,8 @@ int main(int argc, const char * argv[]) {
 	SLabel* label = swCreateLabel(rootView, swMakeRect(10, 390, 100, 100), "Hello, world!");
 	
     double startTime = swGetTime();
-    
+    */
+
 	//GL Init
     swMakeContextCurrent(context);
 
@@ -86,11 +99,12 @@ int main(int argc, const char * argv[]) {
 
     __glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
 
-	Swin_Vk* vkContext = initVk(vkView);
+	//Swin_Vk* vkContext = initVk(vkView);
     
     while (!swCloseRequested(window)) {
         swPollEvents();
-        
+
+        /*
         double currentTime = swGetTime();
         
         frames++;
@@ -100,7 +114,10 @@ int main(int argc, const char * argv[]) {
             frames = 0;
             printf("%d\n", fps);
         }
-        
+         */
+
+        swSleep(1);
+
 		__glClear(GL_COLOR_BUFFER_BIT);
         
         __glBegin(GL_TRIANGLES);
@@ -114,7 +131,7 @@ int main(int argc, const char * argv[]) {
         
         swSwapBufers(context);
 
-		renderVk(vkContext);
+		//renderVk(vkContext);
 
 		swDraw(window);
     }

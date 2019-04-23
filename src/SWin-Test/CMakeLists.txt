@@ -24,4 +24,4 @@ endif()
 
 target_include_directories (SWin-Test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
 
-target_link_libraries (SWin-Test LINK_PUBLIC SWin)
+target_link_libraries (SWin-Test ${SWIN_LIBRARIES})

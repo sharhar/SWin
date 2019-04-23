@@ -56,3 +56,5 @@ dkms.conf
 
 /build
 /Win32
+/.idea
+/cmake-build-debug
