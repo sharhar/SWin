@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <time.h>
 
+int XrmUniqueQuark(); //this function is defined in libX11.so, it is declared to remove a compiler warning
+
 Display* __sWin_X11_display;
 int __sWin_X11_screen;
 unsigned long __sWin_X11_black;
@@ -19,12 +21,13 @@ double __sWin_X11_startTime = 0;
 double _swGetRawTime();
 
 void swInit() {
+	XInitThreads();
     __sWin_X11_display = XOpenDisplay(NULL);
     __sWin_X11_screen = DefaultScreen(__sWin_X11_display);
     __sWin_X11_black = BlackPixel(__sWin_X11_display, __sWin_X11_screen);
     __sWin_X11_white = WhitePixel(__sWin_X11_display, __sWin_X11_screen);
     __sWin_X11_wmDeleteMessage = XInternAtom(__sWin_X11_display, "WM_DELETE_WINDOW", False);
-    __sWin_X11_context = XUniqueContext();
+    __sWin_X11_context = (XContext)XrmUniqueQuark();
 
 	__sWin_X11_startTime = _swGetRawTime();
 }

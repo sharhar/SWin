@@ -148,6 +148,11 @@ SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attrib
 }
 
 void swMakeContextCurrent(SOpenGLContext* context) {
+	if(context == NULL) {
+		__sWin_X11_glXMakeContextCurrent(__sWin_X11_display, NULL, NULL, NULL);
+		return;
+	}
+
 	SWin_X11_OpenGLContext* ctx = (SWin_X11_OpenGLContext*)context;
 	__sWin_X11_glXMakeContextCurrent(__sWin_X11_display, ctx->drawable, ctx->drawable, ctx->context);
 }

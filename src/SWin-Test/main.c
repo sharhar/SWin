@@ -36,6 +36,53 @@ void buttonCallback(STextField* textField) {
     //printf("%s\n", swGetTextFromTextField(textField));
 }
 
+uint8_t running = 1;
+
+typedef struct RenderInfo {
+	SView* view;
+	float rotDir;
+	float r, g, b;
+} RenderInfo;
+
+void renderFunction(RenderInfo* info) {
+	SOpenGLContextAttribs attribs;
+	attribs.major = 3;
+	attribs.minor = 3;
+	attribs.debug = 1;
+	attribs.swapInterval = 1;
+	attribs.forwardCompat = 1;
+	attribs.profile = SWIN_OPENGL_CONTEXT_PROFILE_COMPATIBILITY;
+
+	SOpenGLContext* context = swCreateOpenGLContext(info->view, &attribs);
+
+	swMakeContextCurrent(context);
+
+	printf("GL Version: %s\n", __glGetString(GL_VERSION));
+
+	__glViewport(0, 0, 300, 300);
+
+	__glClearColor(info->r, info->g, info->b, 1.0f);
+
+	while(running) {
+		__glRotatef(info->rotDir, 0, 0, 1);
+
+		__glClear(GL_COLOR_BUFFER_BIT);
+
+		__glBegin(GL_TRIANGLES);
+		__glColor3f(1.0f, 0.0f, 0.0f);
+		__glVertex2f(-0.69f, -0.4f);
+		__glColor3f(0.0f, 1.0f, 0.0f);
+		__glVertex2f( 0.0f,  0.8f);
+		__glColor3f(0.0f, 0.0f, 1.0f);
+		__glVertex2f( 0.69f, -0.4f);
+		__glEnd();
+
+		swSwapBufers(context);
+	}
+
+	swDestroyOpenGLContext(context);
+}
+
 typedef void Swin_Vk;
 
 Swin_Vk* initVk(SView* view);
@@ -45,7 +92,7 @@ int main(int argc, const char * argv[]) {
     swInit();
 	swInitGL();
 
-    SWindow* window = swCreateWindow(1000, 620, "UI Test");
+    SWindow* window = swCreateWindow(1000, 630, "UI Test");
 
     SColor winBG = {1,1,1,1};
     SColor glBG = {0,0,0,0};
@@ -54,19 +101,10 @@ int main(int argc, const char * argv[]) {
 
     swSetViewBackgroundColor(rootView, winBG);
     
-	SOpenGLContextAttribs attribs;
-	attribs.major = 3;
-	attribs.minor = 3;
-	attribs.debug = 1;
-	attribs.swapInterval = 1;
-	attribs.forwardCompat = 1;
-	attribs.profile = SWIN_OPENGL_CONTEXT_PROFILE_COMPATIBILITY;
-
-	SView* glView = swCreateView(rootView, swMakeRect(390, 10, 600, 600));
-
-    swSetViewBackgroundColor(glView, glBG);
-
-	SOpenGLContext* context = swCreateOpenGLContext(glView, &attribs);
+	SView* glView1 = swCreateView(rootView, swMakeRect(380, 10, 300, 300));
+	SView* glView2 = swCreateView(rootView, swMakeRect(690, 10, 300, 300));
+	SView* glView3 = swCreateView(rootView, swMakeRect(380, 320, 300, 300));
+	SView* glView4 = swCreateView(rootView, swMakeRect(690, 320, 300, 300));
 
 	/*
 	STextField* textField = swCreateTextField(rootView, swMakeRect(10, 580, 285, 30), "text");
@@ -78,9 +116,6 @@ int main(int argc, const char * argv[]) {
 	SLabel* label = swCreateLabel(rootView, swMakeRect(10, 390, 100, 100), "Hello, world!");
 	*/
 
-	//GL Init
-    swMakeContextCurrent(context);
-
 	__glClear = swGetProcAddressGL("glClear");
 	__glClearColor = swGetProcAddressGL("glClearColor");
 	__glViewport = swGetProcAddressGL("glViewport");
@@ -91,14 +126,40 @@ int main(int argc, const char * argv[]) {
 	__glGetString = swGetProcAddressGL("glGetString");
 	__glRotatef = swGetProcAddressGL("glRotatef");
 
-	printf("GL Version: %s\n", __glGetString(GL_VERSION));
+	running = 1;
+
+	RenderInfo renderInfos[4];
+	renderInfos[0].view = glView1;
+	renderInfos[0].rotDir = 1;
+	renderInfos[0].r = 0;
+	renderInfos[0].g = 0;
+	renderInfos[0].b = 0;
+
+	renderInfos[1].view = glView2;
+	renderInfos[1].rotDir = -1;
+	renderInfos[1].r = 1;
+	renderInfos[1].g = 1;
+	renderInfos[1].b = 1;
+
+	renderInfos[2].view = glView3;
+	renderInfos[2].rotDir = -1;
+	renderInfos[2].r = 1;
+	renderInfos[2].g = 1;
+	renderInfos[2].b = 1;
+
+	renderInfos[3].view = glView4;
+	renderInfos[3].rotDir = 1;
+	renderInfos[3].r = 0;
+	renderInfos[3].g = 0;
+	renderInfos[3].b = 0;
+
+	SThread* thread1 = swCreateThread(renderFunction, renderInfos);
+	SThread* thread2 = swCreateThread(renderFunction, renderInfos+1);
+	SThread* thread3 = swCreateThread(renderFunction, renderInfos+2);
+	SThread* thread4 = swCreateThread(renderFunction, renderInfos+3);
 
     uint32_t frames = 0;
     uint32_t fps = 0;
-
-	__glViewport(0, 0, 600, 600);
-
-    __glClearColor(0.2f, 0.3f, 0.8f, 1.0f);
 
 	//Swin_Vk* vkContext = initVk(vkView);
 
@@ -118,27 +179,20 @@ int main(int argc, const char * argv[]) {
 
         swPollEvents();
 
-	    __glRotatef(1, 0, 0, 1);
-
-		__glClear(GL_COLOR_BUFFER_BIT);
-        
-        __glBegin(GL_TRIANGLES);
-		__glColor3f(1.0f, 0.0f, 0.0f);
-		__glVertex2f(-0.9f, -0.9f);
-		__glColor3f(0.0f, 1.0f, 0.0f);
-        __glVertex2f( 0.0f,  0.9f);
-		__glColor3f(0.0f, 0.0f, 1.0f);
-        __glVertex2f( 0.9f, -0.9f);
-        __glEnd();
-        
-        swSwapBufers(context);
+        swSleep(10);
 
 		//renderVk(vkContext);
 
 		swDraw(window);
     }
 
-    swDestroyOpenGLContext(context);
+	running = 0;
+
+    swWaitForThread(thread1);
+	swWaitForThread(thread2);
+	swWaitForThread(thread3);
+	swWaitForThread(thread4);
+
 	swDestroyWindow(window);
     
     return 0;
