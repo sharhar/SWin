@@ -147,6 +147,7 @@ SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attrib
 	XUnlockDisplay(__sWin_X11_display);
 
 	result->drawable = result->window;
+	((SWin_X11_View*)view)->type = SWIN_X11_VIEW_TYPE_OPENGL;
 
 	return result;
 }

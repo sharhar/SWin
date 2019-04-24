@@ -1,7 +1,7 @@
 #include <swin/SWin.h>
 #include <stdio.h>
 
-#define SWIN_TEST_VULKAN
+//#define SWIN_TEST_VULKAN
 
 #define GL_VERSION 0x1F02
 #define GL_COLOR_BUFFER_BIT 0x00004000
@@ -33,7 +33,7 @@ typedef void (pfnglprefunc PFNGLROTATEFPROC)( float angle, float x, float y, flo
 PFNGLROTATEFPROC __glRotatef;
 
 void buttonCallback(STextField* textField) {
-    //printf("%s\n", swGetTextFromTextField(textField));
+	printf("%s\n", swGetTextFromTextField(textField));
 }
 
 uint8_t running = 1;
@@ -104,7 +104,6 @@ int main(int argc, const char * argv[]) {
     SWindow* window = swCreateWindow(1000, 630, "UI Test");
 
     SColor winBG = {1,1,1,1};
-    SColor glBG = {0,0,0,0};
 
     SView* rootView = swGetRootView(window);
 
@@ -115,13 +114,11 @@ int main(int argc, const char * argv[]) {
 	SView* glView3 = swCreateView(rootView, swMakeRect(380, 320, 300, 300));
 	SView* glView4 = swCreateView(rootView, swMakeRect(690, 320, 300, 300));
 
-	/*
-	STextField* textField = swCreateTextField(rootView, swMakeRect(10, 580, 285, 30), "text");
-
-    SButton* button = swCreateButton(rootView, swMakeRect(305, 580, 75, 30), "Submit", &buttonCallback, textField);
+	STextField* textField = swCreateTextField(rootView, swMakeRect(10, 580, 275, 30), "text");
 
 	SLabel* label = swCreateLabel(rootView, swMakeRect(10, 390, 100, 100), "Hello, world!");
-	*/
+
+	SButton* button = swCreateButton(rootView, swMakeRect(295, 580, 75, 30), "Submit", &buttonCallback, textField);
 
 	SView* vkView = swCreateView(rootView, swMakeRect(10, 10, 360, 360));
 
@@ -212,6 +209,8 @@ int main(int argc, const char * argv[]) {
 	swDestroyThread(thread2);
 	swDestroyThread(thread3);
 	swDestroyThread(thread4);
+
+	swDestroyMutex(mutex);
 
 	swDestroyWindow(window);
     
