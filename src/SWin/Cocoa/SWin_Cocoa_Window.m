@@ -1,15 +1,5 @@
 #include <swin/SWin.h>
-#import <Foundation/Foundation.h>
-#import <Cocoa/Cocoa.h>
-#import <AppKit/NSApplication.h>
-#import <QuartzCore/QuartzCore.h>
-#import <OpenGL/gl.h>
-
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>{
-    BOOL running;
-    SMouseState* mouseState;
-}
-@end
+#include <swin/SWin_Cocoa.h>
 
 @implementation AppDelegate
 
@@ -45,12 +35,6 @@
 
 @end
 
-@interface ButtonData : NSObject  {
-    void* data;
-    void (*pressCallback) (void* data);
-}
-@end
-
 @implementation ButtonData
 
 - (id) initWithCallback:(void*)callback data:(void*)userData {
@@ -64,18 +48,6 @@
 }
 
 @end
-
-CFBundleRef libGL;
-
-void swInit() {
-    [NSApplication sharedApplication];
-    
-    [NSApp setDelegate:[[AppDelegate alloc] init]];
-        
-    [NSApp finishLaunching];
-	
-	libGL = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.opengl"));
-}
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
     NSUInteger windowStyle = NSWindowStyleMaskTitled  | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable;
@@ -105,6 +77,10 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
     [window makeKeyAndOrderFront:nil];
     
     return window;
+}
+
+void swDestroyWindow(SWindow* window) {
+    
 }
 
 void swPollEvents() {
@@ -184,10 +160,6 @@ void swCloseWindow(SWindow* swin) {
     [window dealloc];
 }
 
-void swTerminate() {
-    [((AppDelegate*)[NSApp delegate]) dealloc];
-}
-
 SView* swGetRootView(SWindow* swin) {
     NSWindow* window = (NSWindow*)swin;
     return [window contentView];
@@ -198,59 +170,6 @@ SView* swCreateView(SView* parent, SRect* bounds) {
     NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
     [rootView addSubview:view];
     return view;
-}
-
-SOpenGLView* swCreateOpenGLView(SView* parent, SRect* bounds, SOpenGLContextAttribs* attribs) {
-    NSView* rootView = (NSView*)parent;
-
-	NSOpenGLPixelFormatAttribute openGLversion = NSOpenGLProfileVersionLegacy;
-	
-	if(attribs->major == 4) {
-		openGLversion = NSOpenGLProfileVersion4_1Core;
-	} else if (attribs->major == 3) {
-        openGLversion = NSOpenGLProfileVersion3_2Core;
-    } else {
-        openGLversion = NSOpenGLProfileVersionLegacy;
-    }
-	
-    NSOpenGLPixelFormatAttribute glattribs[] = {
-        NSOpenGLPFAOpenGLProfile, openGLversion,
-        NSOpenGLPFADoubleBuffer,
-        NSOpenGLPFADepthSize, 32,
-        NSOpenGLPFAAccelerated,
-        0
-    };
-    
-    NSOpenGLPixelFormat* pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:glattribs];
-    NSOpenGLView* view = [[NSOpenGLView alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height) pixelFormat:pixelFormat];
-    [rootView addSubview:view];
-	
-	[[view openGLContext] makeCurrentContext];
-	
-	GLint sync = attribs->swapInterval;
-	[[view openGLContext] setValues:&sync forParameter:NSOpenGLCPSwapInterval];
-	
-	return view;
-}
-
-void swMakeContextCurrent(SOpenGLView* sview) {
-    NSOpenGLView* view = (NSOpenGLView*)sview;
-    [[view openGLContext] makeCurrentContext];
-}
-
-void swSwapBufers(SOpenGLView* sview) {
-	NSOpenGLView* view = (NSOpenGLView*)sview;
-	[[view openGLContext] flushBuffer];
-}
-
-void* swGetProcAddress(const char* name) {
-	CFStringRef symbolName = CFStringCreateWithCString(kCFAllocatorDefault, name, kCFStringEncodingASCII);
-	
-	void* result = CFBundleGetFunctionPointerForName(libGL, symbolName);
-	
-	CFRelease(symbolName);
-	
-	return result;
 }
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData) {
@@ -285,10 +204,6 @@ SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
     return label;
 }
 
-double swGetTime() {
-    return [[[NSDate alloc] init] timeIntervalSinceReferenceDate];
-}
-
 STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
     NSView* rootView = (NSView*)parent;
     NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
@@ -315,4 +230,8 @@ SMouseState* swGetMouseState(SWindow* swin) {
     NSWindow* window = (NSWindow*)swin;
     AppDelegate* delegate = (AppDelegate*)[window delegate];
     return [delegate getMouseState];
+}
+
+void swSetViewBackgroundColor(SView* view, SColor color) {
+    
 }

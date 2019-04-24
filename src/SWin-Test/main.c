@@ -49,8 +49,8 @@ typedef struct RenderInfo {
 
 void renderFunction(RenderInfo* info) {
 	SOpenGLContextAttribs attribs;
-	attribs.major = 3;
-	attribs.minor = 3;
+	attribs.major = 2;
+	attribs.minor = 1;
 	attribs.debug = 1;
 	attribs.swapInterval = 1;
 	attribs.forwardCompat = 1;

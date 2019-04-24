@@ -1,3 +1,6 @@
+#ifndef SWin_X11_h
+#define SWin_X11_h
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
@@ -72,3 +75,5 @@ extern unsigned long __sWin_X11_darkBlue;
 extern unsigned long __sWin_X11_lightGray;
 extern unsigned long __sWin_X11_gray;
 extern unsigned long __sWin_X11_DimGray;
+
+#endif
