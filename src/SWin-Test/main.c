@@ -85,6 +85,8 @@ void renderFunction(RenderInfo* info) {
 		__glColor3f(0.0f, 0.0f, 1.0f);
 		__glVertex2f( 0.69f, -0.4f);
 		__glEnd();
+        
+        swSleep(10);
 
 		swSwapBufers(context);
 	}
