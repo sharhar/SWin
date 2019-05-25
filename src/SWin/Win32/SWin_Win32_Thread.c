@@ -30,8 +30,24 @@ void swWaitForThread(SThread* thread) {
 	WaitForSingleObject(wthread->handle, INFINITE);
 }
 
-void swDeleteThread(SThread* thread) {
+void swDestroyThread(SThread* thread) {
 	SWin_Win32_Thread* wthread = (SWin_Win32_Thread*)thread;
 	CloseHandle(wthread->handle);
 	free(thread);
+}
+
+SMutex* swCreateMutex() {
+	return CreateMutex(NULL, FALSE, NULL);
+}
+
+void swLockMutex(SMutex* mutex) {
+	WaitForSingleObject(mutex, INFINITE);
+}
+
+void swUnlockMutex(SMutex* mutex) {
+	ReleaseMutex(mutex);
+}
+
+void swDestroyMutex(SMutex* mutex) {
+	CloseHandle(mutex);
 }

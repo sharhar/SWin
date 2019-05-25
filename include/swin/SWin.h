@@ -1,7 +1,9 @@
 #ifndef SWin_h
 #define SWin_h
 
-#include <stdint.h>
+#include <swin/SWin_Base.h>
+
+#define CHECK_RECT(rect) if(rect->dispose) { DEALLOC(rect); }
 
 typedef void SWindow;
 typedef void SView;
@@ -14,6 +16,7 @@ typedef void SMutex;
 
 typedef struct SRect {
     float x, y, width, height;
+	SBool dispose;
 } SRect;
 
 typedef struct SMouseState {
@@ -28,12 +31,12 @@ typedef enum SOpenGLContextProfile {
 }SOpenGLContextProfile;
 
 typedef struct SOpenGLContextAttribs {
-	int major;
-	int minor;
-	int debug;
-	int forwardCompat;
+	uint8_t major;
+	uint8_t minor;
+	uint8_t debug;
+	uint8_t forwardCompat;
+	uint8_t swapInterval;
 	SOpenGLContextProfile profile;
-	int swapInterval;
 } SOpenGLContextAttribs;
 
 typedef struct SColor {
@@ -84,6 +87,7 @@ double swGetTime();
 void swSleep(uint32_t milliSeconds);
 
 SRect* swMakeRect(float x, float y, float w, float h);
+SRect* swMakeDisposableRect(float x, float y, float w, float h);
 
 void swTerminate();
 

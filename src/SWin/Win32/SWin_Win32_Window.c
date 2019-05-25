@@ -3,16 +3,22 @@
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
+#define GWL_HINSTANCE (-6) //I don't know why, but even though this macro is defined in windows.h, it needs to be redefined here for this file to compile
+
 uint32_t __sWin_Win32_viewID;
+MSG __sWin_Win32_msg;
 
 SWindow* swCreateWindow(int width, int height, const char* title) {
-	SWin_Win32_Window* window = malloc(sizeof(SWin_Win32_Window));
+	CHECK(title, "title was NULL", NULL);
+	
+	SWin_Win32_Window* result = ALLOC_S(SWin_Win32_Window);
+	CHECK(result, "Failed to allocate Window", NULL);
 
 	int n;
 	WNDCLASSEX wc;
 	LOGPALETTE* lpPal;
 
-	window->instance = GetModuleHandle(NULL);
+	result->instance = GetModuleHandle(NULL);
 
 	RECT contentSize;
 	contentSize.bottom = height;
@@ -27,7 +33,7 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	wc.lpfnWndProc = SWin_Win32_Thread_WndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
-	wc.hInstance = window->instance;
+	wc.hInstance = result->instance;
 	wc.hIcon = LoadIcon(NULL, IDI_WINLOGO);
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
@@ -35,85 +41,121 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	wc.lpszClassName = title;
 	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
 
-	if (!RegisterClassEx(&wc)) {
-		MessageBox(NULL, "RegisterClassEx() failed", "Error", MB_OK);
-		printf("Problem!\n");
-		return;
-	}
+	CHECK(RegisterClassEx(&wc), "RegisterClassEx() failed", NULL);
 
 	int nStyle = WS_OVERLAPPED | WS_SYSMENU | WS_VISIBLE | WS_CAPTION | WS_MINIMIZEBOX;
 
-	window->hWnd = CreateWindowEx(WS_EX_LAYERED, title, title, WS_SYSMENU, 100, 100, contentSize.right - contentSize.left, contentSize.bottom - contentSize.top, HWND_DESKTOP, NULL, window->instance, NULL);
-	if (window->hWnd == NULL) {
-		MessageBox(NULL, "CreateWindowEx() failed", "Error", MB_OK);
-		PostQuitMessage(0);
-		printf("Problem!\n");
-		return;
-	}
+	result->hWnd = CreateWindowEx(WS_EX_LAYERED, title, title, WS_SYSMENU, 
+		100, 100, contentSize.right - contentSize.left, contentSize.bottom - contentSize.top, 
+		HWND_DESKTOP, NULL, result->instance, NULL);
 
-	ZeroMemory(&window->msg, sizeof(MSG));
-	window->close = 0;
+	CHECK(result->hWnd, "CreateWindowEx() failed", NULL);
 
-	SWin_Win32_RootPointer* root = (SWin_Win32_RootPointer*)malloc(sizeof(SWin_Win32_RootPointer));
-	root->window = window;
-	SetWindowLongPtr(window->hWnd, GWLP_USERDATA, (LONG_PTR)root);
+	ZeroMemory(&result->msg, sizeof(MSG));
+	result->close = 0;
 
-	SetLayeredWindowAttributes(window->hWnd, RGB(0, 0, 0), 255, LWA_ALPHA);
-	ShowWindow(window->hWnd, SW_SHOW);
-	UpdateWindow(window->hWnd);
-	SetForegroundWindow(window->hWnd);
-	SetFocus(window->hWnd);
+	SWin_Win32_RootPointer* root = ALLOC_S(SWin_Win32_RootPointer);
+	CHECK(root, "Failed to Allocate RootPointer", NULL);
 
-	SendMessage(window->hWnd, WM_SETFONT, __sWin_Win32_font, TRUE);
+	root->window = result;
+	SetWindowLongPtr(result->hWnd, GWLP_USERDATA, (LONG_PTR)root);
 
-	window->mouseState = malloc(sizeof(SMouseState));
-	window->mouseState->x = 0;
-	window->mouseState->y = 0;
-	window->mouseState->ldown = 0;
+	SetLayeredWindowAttributes(result->hWnd, RGB(0, 0, 0), 255, LWA_ALPHA);
+	ShowWindow(result->hWnd, SW_SHOW);
+	UpdateWindow(result->hWnd);
+	SetForegroundWindow(result->hWnd);
+	SetFocus(result->hWnd);
 
-	window->root = window;
+	SendMessage(result->hWnd, WM_SETFONT, __sWin_Win32_font, TRUE);
 
-	return window;
+	result->mouseState = ALLOC_S(SMouseState);
+	CHECK(result->mouseState, "Failed to Allocate MouseState", NULL);
+
+	result->mouseState->x = 0;
+	result->mouseState->y = 0;
+	result->mouseState->ldown = 0;
+
+	result->root = result;
+
+	return result;
 }
 
 void swPollEvents() {
-	MSG msg;
-	ZeroMemory(&msg, sizeof(MSG));
+	ZeroMemory(&__sWin_Win32_msg, sizeof(MSG));
 	
-	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+	while (PeekMessage(&__sWin_Win32_msg, NULL, 0, 0, PM_REMOVE)) {
+		TranslateMessage(&__sWin_Win32_msg);
+		DispatchMessage(&__sWin_Win32_msg);
 	}
 }
 
-void swDraw(SWin_Win32_Window* window) {
-	
+void swDraw(SWindow* window) {
+	CHECK(window, "window was NULL", NULL);
+
+	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
 }
 
-uint8_t swCloseRequested(SWin_Win32_Window* window) {
-	return window->close;
+uint8_t swCloseRequested(SWindow* window) {
+	CHECK(window, "window was NULL", 1);
+
+	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
+	return _window->close;
 }
 
-void swCloseWindow(SWin_Win32_Window* window) {
+void swDestroyWindow(SWindow* window) {
+	CHECK(window, "window was NULL", NULL);
+
+	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
 	PostQuitMessage(0);
-	DestroyWindow(window->hWnd);
+	DestroyWindow(_window->hWnd);
 
-	window->instance = NULL;
+	_window->instance = NULL;
+
+	DEALLOC(_window);
 }
 
-SView* swGetRootView(SWin_Win32_Window* window) {
-	return (SView*)window->hWnd;
+SView* swGetRootView(SWindow* window) {
+	CHECK(window, "window was NULL", NULL);
+
+	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
+	return (SView*)_window->hWnd;
 }
 
-SView* swCreateView(HWND parent, SRect* bounds) {
-	size_t len = sizeof(char) * (size_t)ceil(log10(__sWin_Win32_viewID)) + 2;
+SView* swCreateView(SView* parent, SRect* bounds) {
+	CHECK(parent, "parent was NULL", NULL);
+	CHECK(bounds, "bounds was NULL", NULL);
 
-	char* viewIDStr = malloc(len);
-	memset(viewIDStr, 0, len);
+	HWND _parent =  (HWND)parent;
+	uint32_t viewID = __sWin_Win32_viewID;
 
-	sprintf(viewIDStr + 1, "%d", __sWin_Win32_viewID);
+	size_t len = 0;
+	while (viewID != 0) {
+		viewID = viewID / 10;
+		len++;
+	}
+
+	char* pre_viewIDStr = ALLOC(char*, len+1);
+	CHECK(pre_viewIDStr, "Failed to Allocate String", NULL);
+
+	memset(pre_viewIDStr, 0, len+1);
+
+	viewID = __sWin_Win32_viewID;
+
+	for (int i = 0; i < len; i++) {
+		pre_viewIDStr[i] = ((char)(viewID % 10)) + '0';
+		viewID = viewID / 10;
+	}
+
+	char* viewIDStr = ALLOC(char*, len+2);
+	CHECK(viewIDStr, "Failed to Allocate String", NULL);
+
+	memset(viewIDStr, 0, len+2);
 
 	viewIDStr[0] = 'C';
+
+	for (int i = 0; i < len; i++) {
+		viewIDStr[i + 1] = pre_viewIDStr[len - i - 1];
+	}
 
 	WNDCLASSEX wc;
 	wc.cbSize = sizeof(WNDCLASSEX);
@@ -121,7 +163,7 @@ SView* swCreateView(HWND parent, SRect* bounds) {
 	wc.lpfnWndProc = SWin_Win32_Thread_WndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
-	wc.hInstance = GetWindowLong(parent, GWL_HINSTANCE);
+	wc.hInstance = GetWindowLong(_parent, GWL_HINSTANCE);
 	wc.hIcon = LoadIcon(NULL, IDI_WINLOGO);
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
@@ -129,138 +171,165 @@ SView* swCreateView(HWND parent, SRect* bounds) {
 	wc.lpszClassName = viewIDStr;
 	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
 
-	if (!RegisterClassEx(&wc)) {
-		MessageBox(NULL, "RegisterClassEx() failed", "Error", MB_OK);
-		printf("Problem!\n");
-		return;
-	}
+	CHECK(RegisterClassEx(&wc), "RegisterClassEx() failed", NULL);
 
 	RECT viewBounds;
-	GetClientRect(parent, &viewBounds);
+	GetClientRect(_parent, &viewBounds);
 
 	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
 
-	HWND hWnd = CreateWindowEx(0, TEXT(viewIDStr),
+	HWND result = CreateWindowEx(0, TEXT(viewIDStr),
 		(LPCTSTR)NULL,
 		WS_CHILD | WS_BORDER | WS_VISIBLE,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
-		parent,
+		_parent,
 		(HMENU)__sWin_Win32_viewID,
-		GetWindowLong(parent, GWL_HINSTANCE),
+		GetWindowLong(_parent, GWL_HINSTANCE),
 		NULL);
 
-	SetWindowLongPtr(hWnd, GWLP_USERDATA, GetWindowLongPtr(parent, GWLP_USERDATA));
+	CHECK(result, "CreateWindowEx() failed", NULL);
+
+	SetWindowLongPtr(result, GWLP_USERDATA, GetWindowLongPtr(_parent, GWLP_USERDATA));
 
 	__sWin_Win32_viewID++;
 
-	return hWnd;
+	CHECK_RECT(bounds);
+
+	return result;
 }
 
-SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, buttonCallback callback, void* userData) {
+void swSetViewBackgroundColor(SView* view, SColor color) {
+	CHECK(view, "view was NULL", NULL);
+}
+
+SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData) {
+	CHECK(parent, "parent was NULL", NULL);
+	CHECK(bounds, "bounds was NULL", NULL);
+	CHECK(title, "title was NULL", NULL);
+	CHECK(callback, "callback was NULL", NULL);
+
+	HWND _parent = (HWND)parent;
+	buttonCallback _callback = (buttonCallback)callback;
+
 	RECT viewBounds;
-	GetClientRect(parent, &viewBounds);
+	GetClientRect(_parent, &viewBounds);
 
 	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
 
-	HWND button = CreateWindow(
+	HWND result = CreateWindow(
 		TEXT("BUTTON"), TEXT(title),
 		WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
-		parent,
+		_parent,
 		(HMENU)__sWin_Win32_viewID,
-		GetWindowLong(parent, GWL_HINSTANCE), NULL);
+		GetWindowLong(_parent, GWL_HINSTANCE), NULL);
+	
+	CHECK(result, "CreateWindow(\"BUTTON\") failed", NULL);
 
-	SendMessage(button, WM_SETFONT, __sWin_Win32_font, TRUE);
+	SendMessage(result, WM_SETFONT, __sWin_Win32_font, TRUE);
+
+	SWin_Win32_Button* buttonInfo = ALLOC_S(SWin_Win32_Button);
+	CHECK(buttonInfo, "Failed to Allocate Button", NULL);
+
+	buttonInfo->callback = _callback;
+	buttonInfo->userPointer = userData;
+	buttonInfo->hWnd = result;
+
+	SetWindowLongPtr(result, GWLP_USERDATA, (LONG_PTR)buttonInfo);
 
 	__sWin_Win32_viewID++;
 
-	SWin_Win32_Button* buttonInfo = malloc(sizeof(SWin_Win32_Button));
-	buttonInfo->callback = callback;
-	buttonInfo->userPointer = userData;
-	buttonInfo->hWnd = button;
+	CHECK_RECT(bounds);
 
-	SetWindowLongPtr(button, GWLP_USERDATA, (LONG_PTR)buttonInfo);
-
-	return button;
+	return result;
 }
 
-SLabel* swCreateLabel(HWND parent, SRect* bounds, const char* text) {
+SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
+	CHECK(parent, "parent was NULL", NULL);
+	CHECK(bounds, "bounds was NULL", NULL);
+	CHECK(text, "text was NULL", NULL);
+	
+	HWND _parent = (HWND)parent;
+
 	RECT viewBounds;
 	GetClientRect(parent, &viewBounds);
 
 	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
 
-	HWND label = CreateWindow(
+	HWND result = CreateWindow(
 		TEXT("STATIC"), TEXT(text),
 		WS_VISIBLE | WS_CHILD | WS_BORDER,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
-		parent,
+		_parent,
 		(HMENU)__sWin_Win32_viewID,
-		GetWindowLong(parent, GWL_HINSTANCE), NULL);
+		GetWindowLong(_parent, GWL_HINSTANCE), NULL);
 
-	SendMessage(label, WM_SETFONT, __sWin_Win32_font, TRUE);
+	CHECK(result, "CreateWindow(\"STATIC\") failed", NULL);
 
-	//HWND cWnd = capCreateCaptureWindowA("", WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 0, 0, 1000, 620, parent, 0);
-	//if (!SendMessage(cWnd, WM_USER + 10, devId, NULL) != NULL) {
-	//	SendMessage(cWnd, WM_CAP_SET_SCALE, 1, Nothing)
-	//		SendMessage(cWnd, WM_CAP_SET_PREVIEWRATE, 66, Nothing)
-	//		SendMessage(cWnd, WM_CAP_SET_PREVIEW, 1, Nothing)
-	//}
-	//else {
-		//MessageBox.Show("Error connecting to capture device. Make sure your WebCam is connected and try again.");
-	//}
+	SendMessage(result, WM_SETFONT, __sWin_Win32_font, TRUE);
 
-	//SetWindowText(label, L"Text Override");
-
-	//SetWindowPos(label, HWND_TOP, bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height, 0);
-
-	BringWindowToTop(label);
-
-	//SetForegroundWindow(label);
+	BringWindowToTop(result);
 
 	__sWin_Win32_viewID++;
 
-	return label;
+	CHECK_RECT(bounds);
+
+	return result;
 }
 
 STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
+	CHECK(parent, "parent was NULL", NULL);
+	CHECK(bounds, "bounds was NULL", NULL);
+	CHECK(text, "text was NULL", NULL);
+
+	HWND _parent = (HWND)parent;
+
 	RECT viewBounds;
 	GetClientRect(parent, &viewBounds);
 
 	int viewHeight = abs(viewBounds.top - viewBounds.bottom);
 
-	HWND textField = CreateWindow(
+	HWND result = CreateWindow(
 		TEXT("EDIT"), TEXT(text),
 		WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL,
 		bounds->x, viewHeight - bounds->y - bounds->height, bounds->width, bounds->height,
-		parent,
+		_parent,
 		(HMENU)__sWin_Win32_viewID,
-		GetWindowLong(parent, GWL_HINSTANCE), NULL);
+		GetWindowLong(_parent, GWL_HINSTANCE), NULL);
 
-	SendMessage(textField, WM_SETFONT, __sWin_Win32_font, TRUE);
+	CHECK(result, "CreateWindow(\"EDIT\") failed", NULL);
+
+	SendMessage(result, WM_SETFONT, __sWin_Win32_font, TRUE);
 
 	__sWin_Win32_viewID++;
 
-	return textField;
+	CHECK_RECT(bounds);
+
+	return result;
 }
 
 char* swGetTextFromTextField(STextField* textField) {
-	HWND hwnd = (HWND)textField;
+	CHECK(textField, "textField was NULL", NULL);
 
-	int length = SendMessage(hwnd, WM_GETTEXTLENGTH, 0, 0);
+	HWND _textField = (HWND)textField;
 
-	if (length == -1) {
-		return "";
-	}
+	size_t length = SendMessage(_textField, WM_GETTEXTLENGTH, 0, 0);
 
-	char* buffer = malloc(sizeof(char) * (length + 1));
-	SendMessage(hwnd, WM_GETTEXT, length + 1, (LPARAM)buffer);
+	CHECK(length == -1, "SendMessage(WM_GETTEXTLENGTH) failed", NULL);
 
-	return buffer;
+	char* result = ALLOC(char, length + 1);
+	CHECK(result, "Failed to allocate String", NULL);
+	SendMessage(_textField, WM_GETTEXT, length + 1, (LPARAM)result);
+
+	return result;
 }
 
-SMouseState* swGetMouseState(SWin_Win32_Window* window) {
-	return window->mouseState;
+SMouseState* swGetMouseState(SWindow* window) {
+	CHECK(window, "window was NULL", NULL);
+
+	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
+	
+	return _window->mouseState;
 }
 
 inline LRESULT CALLBACK SWin_Win32_Thread_WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
