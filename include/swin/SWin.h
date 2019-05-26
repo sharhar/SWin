@@ -45,17 +45,17 @@ typedef struct SColor {
 
 typedef int32_t(*pfnSThreadCallback)(void* data);
 
-void swInit();
-void swInitGL();
-void swInitVK();
+SResult swInit();
+SResult swInitGL();
+SResult swInitVK();
 
 SWindow* swCreateWindow(int width, int height, const char* title);
 
 void swPollEvents();
-void swDraw(SWindow* window);
+SResult swDraw(SWindow* window);
 uint8_t swCloseRequested(SWindow* window);
 
-void swDestroyWindow(SWindow* window);
+SResult swDestroyWindow(SWindow* window);
 
 SView* swGetRootView(SWindow* window);
 
@@ -64,10 +64,10 @@ SView* swCreateView(SView* parent, SRect* bounds);
 void swSetViewBackgroundColor(SView* view, SColor color);
 
 SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attribs);
-void swMakeContextCurrent(SOpenGLContext* context);
-void swSwapBufers(SOpenGLContext* context);
+SResult swMakeContextCurrent(SOpenGLContext* context);
+SResult swSwapBufers(SOpenGLContext* context);
 void* swGetProcAddressGL(const char* name);
-void swDestroyOpenGLContext(SOpenGLContext* context);
+SResult swDestroyOpenGLContext(SOpenGLContext* context);
 
 void* swGetProcAddressVK(void* instance, const char* name);
 char** swGetRequiredExtensionsVK(uint32_t* count);
@@ -94,12 +94,12 @@ void swTerminate();
 SMouseState* swGetMouseState(SWindow* window);
 
 SThread* swCreateThread(pfnSThreadCallback callback, void* data);
-void swWaitForThread(SThread* thread);
-void swDestroyThread(SThread* thread);
+SResult swWaitForThread(SThread* thread);
+SResult swDestroyThread(SThread* thread);
 
 SMutex* swCreateMutex();
-void swLockMutex(SMutex* mutex);
-void swUnlockMutex(SMutex* mutex);
-void swDestroyMutex(SMutex* mutex);
+SResult swLockMutex(SMutex* mutex);
+SResult swUnlockMutex(SMutex* mutex);
+SResult swDestroyMutex(SMutex* mutex);
 
 #endif

@@ -4,7 +4,7 @@
 SWin_Win32_Time __sWin_Win32_Time;
 HFONT __sWin_Win32_font;
 
-void swInit() {
+SResult swInit() {
 #ifndef _DEBUG
 	FreeConsole();
 #endif
@@ -23,6 +23,10 @@ void swInit() {
 
 	__sWin_Win32_font = CreateFont(0, 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS,
 		CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FF_DONTCARE, TEXT("Segoe UI"));
+
+	CHECK(__sWin_Win32_font, "CreateFont(\"Segoe UI\") failed", -1);
+
+	return SWIN_OK;
 }
 
 double swGetTime() {

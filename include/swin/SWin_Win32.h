@@ -12,10 +12,13 @@ typedef struct SWin_Win32_Time {
 	uint64_t frequency;
 } SWin_Win32_Time;
 
-typedef struct SWin_Win32_Window {
-	struct SWin_Win32_Window* root;
-	HINSTANCE instance;
+typedef struct SWin_Win32_View {
 	HWND hWnd;
+	HINSTANCE hInstance;
+} SWin_Win32_View;
+
+typedef struct SWin_Win32_Window {
+	SWin_Win32_View view;
 	const char* title;
 	MSG msg;
 	int close;
@@ -25,7 +28,6 @@ typedef struct SWin_Win32_Window {
 typedef struct SWin_Win32_OpenGLContext {
 	HGLRC hRc;
 	HDC hDc;
-	HPALETTE hPalette;
 } SWin_Win32_OpenGLContext;
 
 typedef struct SWin_Win32_RootPointer {
@@ -44,6 +46,10 @@ typedef struct SWin_Win32_Thread {
 	HANDLE handle;
 	DWORD   threadId;
 } SWin_Win32_Thread;
+
+typedef struct SWin_Win32_Mutex {
+	HANDLE handle;
+} SWin_Win32_Mutex;
 
 inline LRESULT CALLBACK SWin_Win32_Thread_WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 

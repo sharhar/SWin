@@ -8,46 +8,87 @@ DWORD WINAPI SWin_Win32_Thread_ThreadFunction(LPVOID lpParam) {
 
 	int32_t result = callback(datas[1]);
 
-	free(datas);
+	DEALLOC(datas);
 
 	return result;
 }
 
 SThread* swCreateThread(pfnSThreadCallback callback, void* data) {
-	SWin_Win32_Thread* result = (SWin_Win32_Thread*)malloc(sizeof(SWin_Win32_Thread));
+	CHECK(callback, "callback was NULL", NULL);
 
-	void** datas = malloc(sizeof(void*) * 2);
+	SWin_Win32_Thread* result = ALLOC_S(SWin_Win32_Thread);
+	CHECK(result, "Failed to allocate SWin_Win32_Thread", NULL);
+
+	void** datas = ALLOC(void*, 2);
+	CHECK(datas, "Failed to allocate void**", NULL);
+
 	datas[0] = callback;
 	datas[1] = data;
 
 	result->handle = CreateThread(NULL, 0, SWin_Win32_Thread_ThreadFunction, datas, 0, &result->threadId);
+	CHECK(result->handle, "CreateThread() failed", NULL);
 
 	return result;
 }
 
-void swWaitForThread(SThread* thread) {
-	SWin_Win32_Thread* wthread = (SWin_Win32_Thread*)thread;
-	WaitForSingleObject(wthread->handle, INFINITE);
+SResult swWaitForThread(SThread* thread) {
+	CHECK(thread, "thread was NULL", SWIN_FAILED);
+
+	SWin_Win32_Thread* _thread = (SWin_Win32_Thread*)thread;
+	
+	WaitForSingleObject(_thread->handle, INFINITE);
+
+	return SWIN_OK;
 }
 
-void swDestroyThread(SThread* thread) {
-	SWin_Win32_Thread* wthread = (SWin_Win32_Thread*)thread;
-	CloseHandle(wthread->handle);
-	free(thread);
+SResult swDestroyThread(SThread* thread) {
+	CHECK(thread, "thread was NULL", SWIN_FAILED);
+	
+	SWin_Win32_Thread* _thread = (SWin_Win32_Thread*)thread;
+	
+	CloseHandle(_thread->handle);
+	DEALLOC(_thread);
+
+	return SWIN_OK;
 }
 
 SMutex* swCreateMutex() {
-	return CreateMutex(NULL, FALSE, NULL);
+	SWin_Win32_Mutex* result = ALLOC_S(SWin_Win32_Mutex);
+	CHECK(result, "Failed to allocate SWin_Win32_Mutex", NULL);
+
+	result->handle = CreateMutex(NULL, FALSE, NULL);
+	CHECK(result->handle, "CreateMutex() failed", NULL);
+
+	return result;
 }
 
-void swLockMutex(SMutex* mutex) {
-	WaitForSingleObject(mutex, INFINITE);
+SResult swLockMutex(SMutex* mutex) {
+	CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+
+	SWin_Win32_Mutex* _mutex = (SWin_Win32_Mutex*)mutex;
+
+	WaitForSingleObject(_mutex->handle, INFINITE);
+
+	return SWIN_OK;
 }
 
-void swUnlockMutex(SMutex* mutex) {
-	ReleaseMutex(mutex);
+SResult swUnlockMutex(SMutex* mutex) {
+	CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+
+	SWin_Win32_Mutex* _mutex = (SWin_Win32_Mutex*)mutex;
+
+	ReleaseMutex(_mutex->handle);
+
+	return SWIN_OK;
 }
 
-void swDestroyMutex(SMutex* mutex) {
-	CloseHandle(mutex);
+SResult swDestroyMutex(SMutex* mutex) {
+	CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+
+	SWin_Win32_Mutex* _mutex = (SWin_Win32_Mutex*)mutex;
+
+	CloseHandle(_mutex->handle);
+	DEALLOC(_mutex);
+
+	return SWIN_OK;
 }
