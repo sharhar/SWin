@@ -14,6 +14,9 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	SWin_Win32_Window* result = ALLOC_S(SWin_Win32_Window);
 	CHECK(result, "Failed to allocate Window", NULL);
 
+	result->type = TYPE_SWIN_WIN32_WINDOW;
+	result->view.type = TYPE_SWIN_WIN32_VIEW;
+
 	int n;
 	WNDCLASSEX wc;
 	LOGPALETTE* lpPal;
@@ -92,6 +95,8 @@ SResult swDraw(SWindow* window) {
 
 	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
 
+	CHECK_T(_window->type, TYPE_SWIN_WIN32_WINDOW, "window was not an SWindow*", NULL);
+
 	return SWIN_OK;
 }
 
@@ -99,6 +104,9 @@ uint8_t swCloseRequested(SWindow* window) {
 	CHECK(window, "window was NULL", 1);
 
 	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
+
+	CHECK_T(_window->type, TYPE_SWIN_WIN32_WINDOW, "window was not an SWindow*", NULL);
+
 	return _window->close;
 }
 
@@ -106,10 +114,10 @@ SResult swDestroyWindow(SWindow* window) {
 	CHECK(window, "window was NULL", SWIN_FAILED);
 
 	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
-	PostQuitMessage(0);
-	DestroyWindow(_window->view.hWnd);
 
-	_window->view.hInstance = NULL;
+	CHECK_T(_window->type, TYPE_SWIN_WIN32_WINDOW, "window was not an SWindow*", NULL);
+
+	DestroyWindow(_window->view.hWnd);
 
 	DEALLOC(_window);
 
@@ -120,6 +128,9 @@ SView* swGetRootView(SWindow* window) {
 	CHECK(window, "window was NULL", NULL);
 
 	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
+
+	CHECK_T(_window->type, TYPE_SWIN_WIN32_WINDOW, "window was not an SWindow*", NULL);
+
 	return (SView*)&_window->view;
 }
 
@@ -129,8 +140,12 @@ SView* swCreateView(SView* parent, SRect* bounds) {
 
 	SWin_Win32_View* _parent = (SWin_Win32_View*)parent;
 
+	CHECK_T(_parent->type, TYPE_SWIN_WIN32_VIEW, "parent was not an SView*", NULL);
+
 	SWin_Win32_View* result = ALLOC_S(SWin_Win32_View);
 	CHECK(result, "Failed to allocate SWin_Win32_View", NULL);
+
+	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_PLAIN;
 
 	uint32_t viewID = __sWin_Win32_viewID;
 
@@ -208,6 +223,10 @@ SView* swCreateView(SView* parent, SRect* bounds) {
 
 void swSetViewBackgroundColor(SView* view, SColor color) {
 	CHECK(view, "view was NULL", NULL);
+
+	SWin_Win32_View* _view = (SWin_Win32_View*)view;
+
+	CHECK_T(_view->type, TYPE_SWIN_WIN32_VIEW, "view was not an SView*", NULL);
 }
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData) {
@@ -219,8 +238,12 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* c
 	SWin_Win32_View* _parent = (SWin_Win32_View*)parent;
 	buttonCallback _callback = (buttonCallback)callback;
 
+	CHECK_T(_parent->type, TYPE_SWIN_WIN32_VIEW, "parent was not an SView*", NULL);
+
 	SWin_Win32_View* result = ALLOC_S(SWin_Win32_View);
 	CHECK(result, "Failed to allocate SWin_Win32_View", NULL);
+
+	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_BUTTON;
 
 	RECT viewBounds;
 	GetClientRect(_parent->hWnd, &viewBounds);
@@ -264,8 +287,12 @@ SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
 	
 	SWin_Win32_View* _parent = (SWin_Win32_View*)parent;
 
+	CHECK_T(_parent->type, TYPE_SWIN_WIN32_VIEW, "parent was not an SView*", NULL);
+
 	SWin_Win32_View* result = ALLOC_S(SWin_Win32_View);
 	CHECK(result, "Failed to allocate SWin_Win32_View", NULL);
+
+	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_LABEL;
 
 	RECT viewBounds;
 	GetClientRect(parent, &viewBounds);
@@ -302,8 +329,12 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
 
 	SWin_Win32_View* _parent = (SWin_Win32_View*)parent;
 
+	CHECK_T(_parent->type, TYPE_SWIN_WIN32_VIEW, "parent was not an SView*", NULL);
+
 	SWin_Win32_View* result = ALLOC_S(SWin_Win32_View);
 	CHECK(result, "Failed to allocate SWin_Win32_View", NULL);
+
+	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_TEXTFIELD;
 
 	RECT viewBounds;
 	GetClientRect(_parent->hWnd, &viewBounds);
@@ -336,6 +367,9 @@ char* swGetTextFromTextField(STextField* textField) {
 
 	SWin_Win32_View* _textField = (SWin_Win32_View*)textField;
 
+	CHECK_T(_textField->type, TYPE_SWIN_WIN32_VIEW, "textFeild was not an STextField*", NULL);
+	CHECK_K(_textField->type, VIEW_TYPE_TEXTFIELD, "textFeild was not an STextField*", NULL);
+
 	size_t length = SendMessage(_textField->hWnd, WM_GETTEXTLENGTH, 0, 0);
 
 	CHECK(length != -1, "SendMessage(WM_GETTEXTLENGTH) failed", NULL);
@@ -354,6 +388,8 @@ SMouseState* swGetMouseState(SWindow* window) {
 	CHECK(window, "window was NULL", NULL);
 
 	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
+
+	CHECK_T(_window->type, TYPE_SWIN_WIN32_WINDOW, "window was not an SWindow*", NULL);
 	
 	return _window->mouseState;
 }
