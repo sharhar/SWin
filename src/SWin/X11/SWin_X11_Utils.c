@@ -133,10 +133,6 @@ double swGetTime() {
 	return _swGetRawTime() - __sWin_X11_startTime;
 }
 
-void swSleep(uint32_t milliSeconds) {
-	usleep(milliSeconds * 1000);
-}
-
 void swPopup(char* title, char* text) {
 
 }

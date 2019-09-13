@@ -73,9 +73,9 @@ void renderFunction(RenderInfo* info) {
 	__glClearColor(info->r, info->g, info->b, 1.0f);
 
 	while(running) {
-		__glRotatef(info->rotDir, 0, 0, 1);
-
 		__glClear(GL_COLOR_BUFFER_BIT);
+
+		__glRotatef(info->rotDir, 0, 0, 1);
 
 		__glBegin(GL_TRIANGLES);
 		__glColor3f(1.0f, 0.0f, 0.0f);

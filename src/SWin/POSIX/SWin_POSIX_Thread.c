@@ -1,6 +1,14 @@
-#include "../../../include/swin/SWin.h"
+#include <swin/SWin.h>
+#include <swin/SWin_X11_Base.h>
 #include <pthread.h>
 #include <time.h>
+#include <malloc.h>
+#include <string.h>
+
+long __sWin_X11_milliSeconds;
+time_t __sWin_X11_seconds;
+struct timespec __sWin_X11_timespec;
+double __sWin_X11_startTime = 0;
 
 typedef struct SWin_POSIX_Thread {
 	pthread_t thread;
@@ -72,4 +80,21 @@ void swDestroyMutex(SMutex* mutex) {
 
 void swSleep(uint32_t milliSeconds) {
     usleep(milliSeconds * 1000);
+}
+
+double _swGetRawTime() {
+	clock_gettime(CLOCK_REALTIME, &__sWin_X11_timespec);
+
+	__sWin_X11_seconds  = __sWin_X11_timespec.tv_sec;
+	__sWin_X11_milliSeconds = __sWin_X11_timespec.tv_nsec;
+	if (__sWin_X11_milliSeconds > 999999999) {
+		__sWin_X11_seconds++;
+		__sWin_X11_milliSeconds = 0;
+	}
+
+	return (double)(__sWin_X11_seconds + (((double)__sWin_X11_milliSeconds)/1000000000.0));
+}
+
+double swGetTime() {
+	return _swGetRawTime() - __sWin_X11_startTime;
 }

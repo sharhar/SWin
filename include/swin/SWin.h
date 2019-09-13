@@ -41,6 +41,7 @@ typedef struct SColor {
 } SColor;
 
 typedef int32_t(*pfnSThreadCallback)(void* data);
+typedef void (*pfnSButtonCallback)(void*);
 
 void swInit();
 void swInitGL();
@@ -70,7 +71,7 @@ void* swGetProcAddressVK(void* instance, const char* name);
 char** swGetRequiredExtensionsVK(uint32_t* count);
 int32_t swCreateWindowSurfaceVK(void* instance, SView* view, void* allocator, void* surface);
 
-SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData);
+SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, pfnSButtonCallback callback, void* userData);
 
 SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text);
 
