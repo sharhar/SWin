@@ -1,6 +1,8 @@
 #include "../../../include/swin/SWin.h"
 #include <pthread.h>
 #include <time.h>
+#include <unistd.h>
+#include <string.h>
 
 typedef struct SWin_POSIX_Thread {
 	pthread_t thread;

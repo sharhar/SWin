@@ -229,7 +229,7 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
 char* swGetTextFromTextField(STextField* textField) {
     NSTextField* field = (NSTextField*)textField;
     
-	return [[field stringValue] UTF8String];
+	return (char*)[[field stringValue] UTF8String];
 }
 
 SMouseState* swGetMouseState(SWindow* swin) {
