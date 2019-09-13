@@ -20,6 +20,15 @@ void swTerminate() {
     [((AppDelegate*)[NSApp delegate]) dealloc];
 }
 
+void swPopup(SWindow* window, char* title, char* text) {
+    NSWindow* _window = (NSWindow*)window;
+    
+    NSPopUpButton* popup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(100, 100, 100, 100) pullsDown:FALSE];
+    
+    [[_window contentView] addSubview:popup];
+    [popup setNeedsDisplay:YES];
+}
+
 double swGetTime() {
     return [[[NSDate alloc] init] timeIntervalSinceReferenceDate];
 }

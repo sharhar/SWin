@@ -81,7 +81,7 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text);
 
 char* swGetTextFromTextField(STextField* textField);
 
-void swPopup(char* title, char* text);
+void swPopup(SWindow* window, char* title, char* text);
 
 double swGetTime();
 void swSleep(uint32_t milliSeconds);
