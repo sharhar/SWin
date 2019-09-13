@@ -1,7 +1,7 @@
 #include <swin/SWin.h>
 #include <swin/SWin_Cocoa.h>
 
-void swInit() {
+SResult swInit() {
     NSString *infoPlistPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Contents/Info.plist"];
     NSMutableDictionary *infoPlist = [NSMutableDictionary dictionaryWithContentsOfFile:infoPlistPath];
     [infoPlist setObject:[NSNumber numberWithBool:YES] forKey:@"NSHighResolutionCapable"];
@@ -12,6 +12,8 @@ void swInit() {
     [NSApp setDelegate:[[AppDelegate alloc] init]];
     
     [NSApp finishLaunching];
+    
+    return SWIN_OK;
 }
 
 void swTerminate() {
