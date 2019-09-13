@@ -5,8 +5,11 @@
 
 CFBundleRef __sWin_Cocoa_libGL;
 
-void swInitGL() {
+SResult swInitGL() {
     __sWin_Cocoa_libGL = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.opengl"));
+    CHECK(__sWin_Cocoa_libGL, "could not load opengl", SWIN_FAILED);
+    
+    return SWIN_OK;
 }
 
 SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attribs) {
@@ -45,14 +48,22 @@ SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attr
     return context;
 }
 
-void swMakeContextCurrent(SOpenGLContext* sview) {
-    NSOpenGLContext* context = (NSOpenGLContext*)sview;
-    [context makeCurrentContext];
+SResult swMakeContextCurrent(SOpenGLContext* context) {
+    CHECK(context, "context was NULL", SWIN_FAILED);
+    
+    NSOpenGLContext* _context = (NSOpenGLContext*)context;
+    [_context makeCurrentContext];
+    
+    return SWIN_OK;
 }
 
-void swSwapBufers(SOpenGLContext* sview) {
-    NSOpenGLContext* context = (NSOpenGLContext*)sview;
-    [context flushBuffer];
+SResult swSwapBufers(SOpenGLContext* context) {
+    CHECK(context, "context was NULL", SWIN_FAILED);
+    
+    NSOpenGLContext* _context = (NSOpenGLContext*)context;
+    [_context flushBuffer];
+    
+    return SWIN_OK;
 }
 
 void* swGetProcAddressGL(const char* name) {
@@ -65,6 +76,8 @@ void* swGetProcAddressGL(const char* name) {
     return result;
 }
 
-void swDestroyOpenGLContext(SOpenGLContext* context) {
+SResult swDestroyOpenGLContext(SOpenGLContext* context) {
+    CHECK(context, "context was NULL", SWIN_FAILED);
     
+    return SWIN_OK;
 }

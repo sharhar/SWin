@@ -79,8 +79,10 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
     return window;
 }
 
-void swDestroyWindow(SWindow* window) {
+SResult swDestroyWindow(SWindow* window) {
+    CHECK(window, "window was NULL", SWIN_FAILED);
     
+    return SWIN_OK;
 }
 
 void swPollEvents() {
@@ -149,9 +151,13 @@ uint8_t swCloseRequested(SWindow* swin) {
     
 }
 
-void swDraw(SWindow* swin) {
-    NSWindow* window = (NSWindow*)swin;
-    [[window contentView] setNeedsDisplay:YES];
+SResult swDraw(SWindow* window) {
+    CHECK(window, "window was NULL", SWIN_FAILED);
+    
+    NSWindow* _window = (NSWindow*)window;
+    [[_window contentView] setNeedsDisplay:YES];
+    
+    return SWIN_OK;
 }
 
 void swCloseWindow(SWindow* swin) {
@@ -223,7 +229,7 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
 char* swGetTextFromTextField(STextField* textField) {
     NSTextField* field = (NSTextField*)textField;
     
-	return [[field stringValue] UTF8String];
+	return (char*)[[field stringValue] UTF8String];
 }
 
 SMouseState* swGetMouseState(SWindow* swin) {

@@ -20,33 +20,52 @@ __sWin_Win32_PFN_vkGetInstanceProcAddr __sWin_Win32_vkGetInstanceProcAddr;
 
 char** __sWin_Win32_extensions = NULL;
 
-void swInitVK() {
+SResult swInitVK() {
 	__sWin_Win32_libVK = LoadLibraryW(L"vulkan-1.dll");
+	CHECK(__sWin_Win32_libVK, "Failed to load vulkan-1.dll", -1);
 
 	__sWin_Win32_vkGetInstanceProcAddr = GetProcAddress(__sWin_Win32_libVK, "vkGetInstanceProcAddr");
+	CHECK(__sWin_Win32_vkGetInstanceProcAddr, "Failed to load vkGetInstanceProcAddr", -1);
 
-	__sWin_Win32_extensions = malloc(sizeof(char*) * 2);
+	__sWin_Win32_extensions = ALLOC(char*, 2);
+	CHECK(__sWin_Win32_extensions, "Failed to Allocate String Array", -1);
+
 	__sWin_Win32_extensions[0] = "VK_KHR_surface";
 	__sWin_Win32_extensions[1] = "VK_KHR_win32_surface";
+
+	return SWIN_OK;
 }
 
 int32_t swCreateWindowSurfaceVK(void* instance, SView* view, void* allocator, void* surface) {
+	CHECK(instance, "instance was NULL", -1);
+	CHECK(view, "view was NULL", -1);
+	CHECK(surface, "surface was NULL", -1);
+
+	SWin_Win32_View* _view = (SWin_Win32_View*)view;
+
 	__sWin_Win32_VkWin32SurfaceCreateInfoKHR surfaceCreateInfo;
 	surfaceCreateInfo.sType = 1000009000; // this is the integer value of VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR
 	surfaceCreateInfo.pNext = NULL;
 	surfaceCreateInfo.flags = 0;
-	surfaceCreateInfo.hinstance = GetModuleHandle(NULL);
-	surfaceCreateInfo.hwnd = (HWND)view;
+	surfaceCreateInfo.hinstance = _view->hInstance;
+	surfaceCreateInfo.hwnd = _view->hWnd;
 
-	return ((__sWin_Win32_PFN_vkCreateWin32SurfaceKHR)swGetProcAddressVK(instance, "vkCreateWin32SurfaceKHR"))(instance, &surfaceCreateInfo, allocator, surface);
+	void* func = swGetProcAddressVK(instance, "vkCreateWin32SurfaceKHR");
+	CHECK(func, "Failed to load vkCreateWin32SurfaceKHR", -1);
+
+	return ((__sWin_Win32_PFN_vkCreateWin32SurfaceKHR)func)(instance, &surfaceCreateInfo, allocator, surface);
 }
 
 char** swGetRequiredExtensionsVK(uint32_t* count) {
+	CHECK(count, "count was NULL", -1);
+
 	*count = 2;
 	return __sWin_Win32_extensions;
 }
 
 void* swGetProcAddressVK(void* instance, const char* name) {
+	CHECK(name, "name was NULL", -1);
+
 	void* result = __sWin_Win32_vkGetInstanceProcAddr(instance, name);
 
 	return result == NULL ? GetProcAddress(__sWin_Win32_libVK, name) : result;

@@ -1,14 +1,9 @@
 #include <swin/SWin.h>
-#include <swin/SWin_X11_Base.h>
 #include <pthread.h>
 #include <time.h>
 #include <malloc.h>
 #include <string.h>
-
-long __sWin_X11_milliSeconds;
-time_t __sWin_X11_seconds;
-struct timespec __sWin_X11_timespec;
-double __sWin_X11_startTime = 0;
+#include <unistd.h>
 
 typedef struct SWin_POSIX_Thread {
 	pthread_t thread;
@@ -35,24 +30,37 @@ void* SWin_POSIX_Thread_ThreadFunction(void* data) {
 }
 
 SThread* swCreateThread(pfnSThreadCallback callback, void* data) {
-	SWin_POSIX_Thread* result = (SWin_POSIX_Thread*)malloc(sizeof(SWin_POSIX_Thread));
+    CHECK(callback, "callback was NULL", NULL);
+    
+	SWin_POSIX_Thread* result = ALLOC_S(SWin_POSIX_Thread);
+    CHECK(result, "Failed to allocate SWin_POSIX_Thread", NULL);
 
-	void** datas = malloc(sizeof(void*) * 2);
+	void** datas = ALLOC(void*, 2);
+    CHECK(datas, "Failed to allocate void**", NULL);
+    
 	datas[0] = callback;
 	datas[1] = data;
 
 	pthread_create(&result->thread, NULL, SWin_POSIX_Thread_ThreadFunction, datas);
+    CHECK(result->thread, "pthread_create() failed", NULL);
 
 	return result;
 }
 
-void swWaitForThread(SThread* thread) {
+SResult swWaitForThread(SThread* thread) {
+    CHECK(thread, "thread was NULL", SWIN_FAILED);
+    
 	pthread_join(((SWin_POSIX_Thread*)thread)->thread, NULL);
+    
+    return SWIN_OK;
 }
 
-void swDestroyThread(SThread* thread) {
+SResult swDestroyThread(SThread* thread) {
+    CHECK(thread, "thread was NULL", SWIN_FAILED);
+    
 	pthread_cancel(((SWin_POSIX_Thread*)thread)->thread);
 
+    return SWIN_OK;
 }
 
 SMutex* swCreateMutex() {
@@ -66,35 +74,30 @@ SMutex* swCreateMutex() {
 	return result;
 }
 
-void swLockMutex(SMutex* mutex) {
+SResult swLockMutex(SMutex* mutex) {
+    CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+    
 	pthread_mutex_lock(&((SWin_POSIX_Mutex*)mutex)->mutex);
+    
+    return SWIN_OK;
 }
 
-void swUnlockMutex(SMutex* mutex) {
+SResult swUnlockMutex(SMutex* mutex) {
+    CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+    
 	pthread_mutex_unlock(&((SWin_POSIX_Mutex*)mutex)->mutex);
+    
+    return SWIN_OK;
 }
 
-void swDestroyMutex(SMutex* mutex) {
+SResult swDestroyMutex(SMutex* mutex) {
+    CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+    
 	pthread_mutex_destroy(&((SWin_POSIX_Mutex*)mutex)->mutex);
+    
+    return SWIN_OK;
 }
 
 void swSleep(uint32_t milliSeconds) {
     usleep(milliSeconds * 1000);
-}
-
-double _swGetRawTime() {
-	clock_gettime(CLOCK_REALTIME, &__sWin_X11_timespec);
-
-	__sWin_X11_seconds  = __sWin_X11_timespec.tv_sec;
-	__sWin_X11_milliSeconds = __sWin_X11_timespec.tv_nsec;
-	if (__sWin_X11_milliSeconds > 999999999) {
-		__sWin_X11_seconds++;
-		__sWin_X11_milliSeconds = 0;
-	}
-
-	return (double)(__sWin_X11_seconds + (((double)__sWin_X11_milliSeconds)/1000000000.0));
-}
-
-double swGetTime() {
-	return _swGetRawTime() - __sWin_X11_startTime;
 }

@@ -111,18 +111,18 @@ int main(int argc, const char * argv[]) {
 
     swSetViewBackgroundColor(rootView, winBG);
     
-	SView* glView1 = swCreateView(rootView, swMakeRect(380, 10, 300, 300));
-	SView* glView2 = swCreateView(rootView, swMakeRect(690, 10, 300, 300));
-	SView* glView3 = swCreateView(rootView, swMakeRect(380, 320, 300, 300));
-	SView* glView4 = swCreateView(rootView, swMakeRect(690, 320, 300, 300));
+	SView* glView1 = swCreateView(rootView, swMakeDisposableRect(380, 10, 300, 300));
+	SView* glView2 = swCreateView(rootView, swMakeDisposableRect(690, 10, 300, 300));
+	SView* glView3 = swCreateView(rootView, swMakeDisposableRect(380, 320, 300, 300));
+	SView* glView4 = swCreateView(rootView, swMakeDisposableRect(690, 320, 300, 300));
 
-	STextField* textField = swCreateTextField(rootView, swMakeRect(10, 580, 275, 30), "text");
+	STextField* textField = swCreateTextField(rootView, swMakeDisposableRect(10, 580, 275, 30), "text");
 
-	SLabel* label = swCreateLabel(rootView, swMakeRect(10, 390, 100, 100), "Hello, world!");
+	SLabel* label = swCreateLabel(rootView, swMakeDisposableRect(10, 390, 100, 100), "Hello, world!");
 
-	SButton* button = swCreateButton(rootView, swMakeRect(295, 580, 75, 30), "Submit", &buttonCallback, textField);
+	SButton* button = swCreateButton(rootView, swMakeDisposableRect(295, 580, 75, 30), "Submit", &buttonCallback, textField);
 
-	SView* vkView = swCreateView(rootView, swMakeRect(10, 10, 360, 360));
+	SView* vkView = swCreateView(rootView, swMakeDisposableRect(10, 10, 360, 360));
 
 	__glClear = swGetProcAddressGL("glClear");
 	__glClearColor = swGetProcAddressGL("glClearColor");

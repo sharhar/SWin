@@ -1,7 +1,9 @@
 #ifndef SWin_h
 #define SWin_h
 
-#include <stdint.h>
+#include <swin/SWin_Base.h>
+
+#define CHECK_RECT(rect) if(rect->dispose) { DEALLOC(rect); }
 
 typedef void SWindow;
 typedef void SView;
@@ -14,6 +16,7 @@ typedef void SMutex;
 
 typedef struct SRect {
     float x, y, width, height;
+	SBool dispose;
 } SRect;
 
 typedef struct SMouseState {
@@ -28,12 +31,12 @@ typedef enum SOpenGLContextProfile {
 }SOpenGLContextProfile;
 
 typedef struct SOpenGLContextAttribs {
-	int major;
-	int minor;
-	int debug;
-	int forwardCompat;
+	uint8_t major;
+	uint8_t minor;
+	uint8_t debug;
+	uint8_t forwardCompat;
+	uint8_t swapInterval;
 	SOpenGLContextProfile profile;
-	int swapInterval;
 } SOpenGLContextAttribs;
 
 typedef struct SColor {
@@ -43,17 +46,17 @@ typedef struct SColor {
 typedef int32_t(*pfnSThreadCallback)(void* data);
 typedef void (*pfnSButtonCallback)(void*);
 
-void swInit();
-void swInitGL();
-void swInitVK();
+SResult swInit();
+SResult swInitGL();
+SResult swInitVK();
 
 SWindow* swCreateWindow(int width, int height, const char* title);
 
 void swPollEvents();
-void swDraw(SWindow* window);
+SResult swDraw(SWindow* window);
 uint8_t swCloseRequested(SWindow* window);
 
-void swDestroyWindow(SWindow* window);
+SResult swDestroyWindow(SWindow* window);
 
 SView* swGetRootView(SWindow* window);
 
@@ -62,10 +65,10 @@ SView* swCreateView(SView* parent, SRect* bounds);
 void swSetViewBackgroundColor(SView* view, SColor color);
 
 SOpenGLContext* swCreateOpenGLContext(SView* view, SOpenGLContextAttribs* attribs);
-void swMakeContextCurrent(SOpenGLContext* context);
-void swSwapBufers(SOpenGLContext* context);
+SResult swMakeContextCurrent(SOpenGLContext* context);
+SResult swSwapBufers(SOpenGLContext* context);
 void* swGetProcAddressGL(const char* name);
-void swDestroyOpenGLContext(SOpenGLContext* context);
+SResult swDestroyOpenGLContext(SOpenGLContext* context);
 
 void* swGetProcAddressVK(void* instance, const char* name);
 char** swGetRequiredExtensionsVK(uint32_t* count);
@@ -79,24 +82,25 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text);
 
 char* swGetTextFromTextField(STextField* textField);
 
-void swPopup(char* title, char* text);
+void swPopup(SWindow* window, char* title, char* text);
 
 double swGetTime();
 void swSleep(uint32_t milliSeconds);
 
 SRect* swMakeRect(float x, float y, float w, float h);
+SRect* swMakeDisposableRect(float x, float y, float w, float h);
 
 void swTerminate();
 
 SMouseState* swGetMouseState(SWindow* window);
 
 SThread* swCreateThread(pfnSThreadCallback callback, void* data);
-void swWaitForThread(SThread* thread);
-void swDestroyThread(SThread* thread);
+SResult swWaitForThread(SThread* thread);
+SResult swDestroyThread(SThread* thread);
 
 SMutex* swCreateMutex();
-void swLockMutex(SMutex* mutex);
-void swUnlockMutex(SMutex* mutex);
-void swDestroyMutex(SMutex* mutex);
+SResult swLockMutex(SMutex* mutex);
+SResult swUnlockMutex(SMutex* mutex);
+SResult swDestroyMutex(SMutex* mutex);
 
 #endif
