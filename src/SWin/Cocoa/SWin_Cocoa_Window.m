@@ -116,7 +116,7 @@ void swPollEvents() {
                 if(ev.type == NSEventTypeLeftMouseUp) {
                     AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
                     SMouseState* mouseState = [delegate getMouseState];
-                    mouseState->ldown = 0;
+					mouseState->ldown = 0;
                 }
                 
                 if(ev.type == NSEventTypeScrollWheel) {
@@ -178,7 +178,7 @@ SView* swCreateView(SView* parent, SRect* bounds) {
     return view;
 }
 
-SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* callback, void* userData) {
+SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, pfnSButtonCallback callback, void* userData) {
     NSView* rootView = (NSView*)parent;
     NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
     [button setTitle: @(title)];
