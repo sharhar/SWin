@@ -49,7 +49,277 @@
 
 @end
 
+@implementation SWinContentView
+
+- (instancetype)initWithSWindow:(SWin_Cocoa_Window *)initWindow
+{
+	self = [super init];
+	if (self != nil)
+	{
+		window = initWindow;
+		trackingArea = nil;
+		//markedText = [[NSMutableAttributedString alloc] init];
+		
+		[self updateTrackingAreas];
+		// NOTE: kUTTypeURL corresponds to NSPasteboardTypeURL but is available
+		//       on 10.7 without having been deprecated yet
+		//[self registerForDraggedTypes:@[(__bridge NSString*) kUTTypeURL]];
+	}
+	
+	return self;
+}
+
+- (void)dealloc
+{
+	[trackingArea release];
+	[super dealloc];
+}
+
+- (BOOL)isOpaque
+{
+	return YES;//[window->ns.object isOpaque];
+}
+
+- (BOOL)canBecomeKeyView
+{
+	return YES;
+}
+
+- (BOOL)acceptsFirstResponder
+{
+	return YES;
+}
+
+- (BOOL)wantsUpdateLayer
+{
+	return YES;
+}
+
+- (void)updateLayer
+{
+	
+}
+
+- (void)cursorUpdate:(NSEvent *)event
+{
+	
+}
+
+- (BOOL)acceptsFirstMouse:(NSEvent *)event
+{
+	return YES;
+}
+
+- (void)mouseDown:(NSEvent *)event
+{
+	//_glfwInputMouseClick(window,
+	//					 GLFW_MOUSE_BUTTON_LEFT,
+	//					 GLFW_PRESS,
+	//					 translateFlags([event modifierFlags]));
+}
+
+- (void)mouseDragged:(NSEvent *)event
+{
+	
+	[self mouseMoved:event];
+}
+
+- (void)mouseUp:(NSEvent *)event
+{
+	//_glfwInputMouseClick(window,
+	//					 GLFW_MOUSE_BUTTON_LEFT,
+	//					 GLFW_RELEASE,
+	//					 translateFlags([event modifierFlags]));
+}
+
+- (void)mouseMoved:(NSEvent *)event
+{
+	//if (window->cursorMode == GLFW_CURSOR_DISABLED)
+	//{
+	//	const double dx = [event deltaX] - window->ns.cursorWarpDeltaX;
+	//	const double dy = [event deltaY] - window->ns.cursorWarpDeltaY;
+		
+	//	_glfwInputCursorPos(window,
+	//						window->virtualCursorPosX + dx,
+	//						window->virtualCursorPosY + dy);
+	//}
+	//else
+	//{
+	//	const NSRect contentRect = [window->ns.view frame];
+	//	// NOTE: The returned location uses base 0,1 not 0,0
+	//	const NSPoint pos = [event locationInWindow];
+		
+	//	_glfwInputCursorPos(window, pos.x, contentRect.size.height - pos.y);
+	//}
+	
+	//window->ns.cursorWarpDeltaX = 0;
+	//window->ns.cursorWarpDeltaY = 0;
+}
+
+- (void)rightMouseDown:(NSEvent *)event
+{
+	//_glfwInputMouseClick(window,
+	//					 GLFW_MOUSE_BUTTON_RIGHT,
+	//					 GLFW_PRESS,
+	//					 translateFlags([event modifierFlags]));
+}
+
+- (void)rightMouseDragged:(NSEvent *)event
+{
+	[self mouseMoved:event];
+}
+
+- (void)rightMouseUp:(NSEvent *)event
+{
+	//_glfwInputMouseClick(window,
+	//					 GLFW_MOUSE_BUTTON_RIGHT,
+	//					 GLFW_RELEASE,
+	//					 translateFlags([event modifierFlags]));
+}
+
+- (void)otherMouseDown:(NSEvent *)event
+{
+	//_glfwInputMouseClick(window,
+	//					 (int) [event buttonNumber],
+	//					 GLFW_PRESS,
+	//					 translateFlags([event modifierFlags]));
+}
+
+- (void)otherMouseDragged:(NSEvent *)event
+{
+	[self mouseMoved:event];
+}
+
+- (void)otherMouseUp:(NSEvent *)event
+{
+	//_glfwInputMouseClick(window,
+	//					 (int) [event buttonNumber],
+	//					 GLFW_RELEASE,
+	//					 translateFlags([event modifierFlags]));
+}
+
+- (void)mouseExited:(NSEvent *)event
+{
+	//if (window->cursorMode == GLFW_CURSOR_HIDDEN)
+	//	showCursor(window);
+	
+	//_glfwInputCursorEnter(window, GLFW_FALSE);
+}
+
+- (void)mouseEntered:(NSEvent *)event
+{
+	//if (window->cursorMode == GLFW_CURSOR_HIDDEN)
+	//	hideCursor(window);
+	
+	//_glfwInputCursorEnter(window, GLFW_TRUE);
+}
+
+- (void)viewDidChangeBackingProperties
+{
+	//const NSRect contentRect = [window->ns.view frame];
+	//const NSRect fbRect = [window->ns.view convertRectToBacking:contentRect];
+	
+	//if (fbRect.size.width != window->ns.fbWidth ||
+	//	fbRect.size.height != window->ns.fbHeight)
+	//{
+	//	window->ns.fbWidth  = fbRect.size.width;
+	//	window->ns.fbHeight = fbRect.size.height;
+	//	_glfwInputFramebufferSize(window, fbRect.size.width, fbRect.size.height);
+	//}
+	
+	//const float xscale = fbRect.size.width / contentRect.size.width;
+	//const float yscale = fbRect.size.height / contentRect.size.height;
+	
+	//if (xscale != window->ns.xscale || yscale != window->ns.yscale)
+	//{
+	//	window->ns.xscale = xscale;
+	//	window->ns.yscale = yscale;
+	//	_glfwInputWindowContentScale(window, xscale, yscale);
+		
+	//	if (window->ns.retina && window->ns.layer)
+	//		[window->ns.layer setContentsScale:[window->ns.object backingScaleFactor]];
+	//}
+}
+
+- (void)drawRect:(NSRect)rect
+{
+	//_glfwInputWindowDamage(window);
+}
+
+- (void)updateTrackingAreas
+{
+	if (trackingArea != nil)
+	{
+		[self removeTrackingArea:trackingArea];
+		[trackingArea release];
+	}
+	
+	const NSTrackingAreaOptions options = NSTrackingMouseEnteredAndExited |
+	NSTrackingActiveInKeyWindow |
+	NSTrackingEnabledDuringMouseDrag |
+	NSTrackingCursorUpdate |
+	NSTrackingInVisibleRect |
+	NSTrackingAssumeInside;
+	
+	trackingArea = [[NSTrackingArea alloc] initWithRect:[self bounds]
+												options:options
+												  owner:self
+											   userInfo:nil];
+	
+	[self addTrackingArea:trackingArea];
+	[super updateTrackingAreas];
+}
+
+- (void)keyDown:(NSEvent *)event
+{
+	//const int key = translateKey([event keyCode]);
+	//const int mods = translateFlags([event modifierFlags]);
+	
+	//_glfwInputKey(window, key, [event keyCode], GLFW_PRESS, mods);
+	
+	if(window->keyDownCallback != NULL) {
+		window->keyDownCallback(__sWin_Cocoa_keycodes[event.keyCode]);
+	}
+	
+	//[self interpretKeyEvents:@[event]];
+}
+
+- (void)keyUp:(NSEvent *)event
+{
+	if(window->keyUpCallback != NULL) {
+		window->keyUpCallback(__sWin_Cocoa_keycodes[event.keyCode]);
+	}
+	
+	//const int key = translateKey([event keyCode]);
+	//const int mods = translateFlags([event modifierFlags]);
+	//_glfwInputKey(window, key, [event keyCode], GLFW_RELEASE, mods);
+}
+
+- (void)scrollWheel:(NSEvent *)event
+{
+	//double deltaX = [event scrollingDeltaX];
+	//double deltaY = [event scrollingDeltaY];
+	
+	//if ([event hasPreciseScrollingDeltas])
+	//{
+	//	deltaX *= 0.1;
+	//	deltaY *= 0.1;
+	//}
+	
+	//if (fabs(deltaX) > 0.0 || fabs(deltaY) > 0.0)
+	//	_glfwInputScroll(window, deltaX, deltaY);
+}
+
+- (void)doCommandBySelector:(SEL)selector
+{
+}
+
+@end
+
+
 SWindow* swCreateWindow(int width, int height, const char* title) {
+	SWin_Cocoa_Window* result = ALLOC_S(SWin_Cocoa_Window);
+	
     NSUInteger windowStyle = NSWindowStyleMaskTitled  | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable;
     
     NSRect screenRect = [[NSScreen mainScreen] frame];
@@ -59,24 +329,28 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
                                    viewRect.size.width,
                                    viewRect.size.height);
     
-    NSWindow* window = [[NSWindow alloc] initWithContentRect:windowRect
+    result->window = [[NSWindow alloc] initWithContentRect:windowRect
                                                    styleMask:windowStyle
                                                      backing:NSBackingStoreBuffered
                                                        defer:NO];
-    
+	
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+	
+	result->root = [[SWinContentView alloc] initWithSWindow:result];
+	[result->window setContentView:result->root];
+	[result->window makeFirstResponder:result->root];
+	
+    [result->window setDelegate:(AppDelegate*)[NSApp delegate]];
+    [result->window setAcceptsMouseMovedEvents:YES];
     
-    [window setDelegate:(AppDelegate*)[NSApp delegate]];
-    [window setAcceptsMouseMovedEvents:YES];
+    [result->window setTitle:@(title)];
     
-    [window setTitle:@(title)];
-    
-    [window setContentView:[[NSView alloc] initWithFrame:viewRect]];
-    [[window contentView] setWantsLayer:YES];
-    
-    [window makeKeyAndOrderFront:nil];
-    
-    return window;
+    [result->window makeKeyAndOrderFront:nil];
+	
+	result->keyDownCallback = NULL;
+	result->keyUpCallback = NULL;
+	
+    return result;
 }
 
 SResult swDestroyWindow(SWindow* window) {
@@ -95,7 +369,6 @@ void swPollEvents() {
                                       dequeue: YES];
             
             if (ev) {
-                
                 if((ev.type == NSEventTypeMouseMoved || ev.type == NSEventTypeLeftMouseDragged) && ev.window != NULL) {
                     NSPoint point = [[ev.window contentView] convertPoint:[ev locationInWindow] fromView:nil];
                     point.y = [[ev.window contentView] bounds].size.height - point.y;
@@ -124,51 +397,49 @@ void swPollEvents() {
                     SMouseState* mouseState = [delegate getMouseState];
                     mouseState->scroll += ev.scrollingDeltaY/10.0f;
                 }
-                
-                /*
-                if(ev.type ==  NSEventTypeKeyDown) {
-                    
-                    if(ev.keyCode == 49) {
-                        NSLog(@"Key w");
-                    }
-                    
-                } else {
-                
-                }
-                 
-                 */
-                
+				
                 [NSApp sendEvent: ev];
             }
         } while (ev);
     }
 }
 
-uint8_t swCloseRequested(SWindow* swin) {
-    NSWindow* window = (NSWindow*)swin;
-    AppDelegate* delegate = (AppDelegate*)[window delegate];
+uint8_t swCloseRequested(SWindow* window) {
+    SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
+    AppDelegate* delegate = (AppDelegate*)[_window->window delegate];
     return (uint8_t)([delegate getRunning] == NO);
-    
+}
+
+SResult swSetKeyDownCallback(SWindow* window, pfnSKeyDownCallback callback) {
+	SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
+	_window->keyDownCallback = callback;
+	return SWIN_OK;
+}
+
+SResult swSetKeyUpCallback(SWindow* window, pfnSKeyUpCallback callback) {
+	SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
+	_window->keyDownCallback = callback;
+	return SWIN_OK;
 }
 
 SResult swDraw(SWindow* window) {
     CHECK(window, "window was NULL", SWIN_FAILED);
     
-    NSWindow* _window = (NSWindow*)window;
-    [[_window contentView] setNeedsDisplay:YES];
+    SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
+    [[_window->window contentView] setNeedsDisplay:YES];
     
     return SWIN_OK;
 }
 
-void swCloseWindow(SWindow* swin) {
-    NSWindow* window = (NSWindow*)swin;
-    [window close];
-    [window dealloc];
+void swCloseWindow(SWindow* window) {
+    SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
+    [_window->window close];
+    [_window->window dealloc];
 }
 
-SView* swGetRootView(SWindow* swin) {
-    NSWindow* window = (NSWindow*)swin;
-    return [window contentView];
+SView* swGetRootView(SWindow* window) {
+    SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
+    return [_window->window contentView];
 }
 
 SView* swCreateView(SView* parent, SRect* bounds) {
@@ -232,9 +503,9 @@ char* swGetTextFromTextField(STextField* textField) {
 	return (char*)[[field stringValue] UTF8String];
 }
 
-SMouseState* swGetMouseState(SWindow* swin) {
-    NSWindow* window = (NSWindow*)swin;
-    AppDelegate* delegate = (AppDelegate*)[window delegate];
+SMouseState* swGetMouseState(SWindow* window) {
+    SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
+    AppDelegate* delegate = (AppDelegate*)[_window->window delegate];
     return [delegate getMouseState];
 }
 

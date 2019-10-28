@@ -54,4 +54,6 @@ else()
 	endif()
 endif()
 
-target_include_directories (SWin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+set(SWIN_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../include CACHE STRING "")
+
+target_include_directories (SWin PUBLIC ${SWIN_HEADERS})
