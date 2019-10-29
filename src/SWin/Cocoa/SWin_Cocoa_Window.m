@@ -58,12 +58,8 @@
 	{
 		window = initWindow;
 		trackingArea = nil;
-		//markedText = [[NSMutableAttributedString alloc] init];
 		
 		[self updateTrackingAreas];
-		// NOTE: kUTTypeURL corresponds to NSPasteboardTypeURL but is available
-		//       on 10.7 without having been deprecated yet
-		//[self registerForDraggedTypes:@[(__bridge NSString*) kUTTypeURL]];
 	}
 	
 	return self;
@@ -77,7 +73,7 @@
 
 - (BOOL)isOpaque
 {
-	return YES;//[window->ns.object isOpaque];
+	return YES;
 }
 
 - (BOOL)canBecomeKeyView
@@ -120,7 +116,6 @@
 
 - (void)mouseDragged:(NSEvent *)event
 {
-	
 	[self mouseMoved:event];
 }
 
@@ -272,16 +267,9 @@
 
 - (void)keyDown:(NSEvent *)event
 {
-	//const int key = translateKey([event keyCode]);
-	//const int mods = translateFlags([event modifierFlags]);
-	
-	//_glfwInputKey(window, key, [event keyCode], GLFW_PRESS, mods);
-	
 	if(window->keyDownCallback != NULL) {
 		window->keyDownCallback(__sWin_Cocoa_keycodes[event.keyCode]);
 	}
-	
-	//[self interpretKeyEvents:@[event]];
 }
 
 - (void)keyUp:(NSEvent *)event
@@ -289,10 +277,6 @@
 	if(window->keyUpCallback != NULL) {
 		window->keyUpCallback(__sWin_Cocoa_keycodes[event.keyCode]);
 	}
-	
-	//const int key = translateKey([event keyCode]);
-	//const int mods = translateFlags([event modifierFlags]);
-	//_glfwInputKey(window, key, [event keyCode], GLFW_RELEASE, mods);
 }
 
 - (void)scrollWheel:(NSEvent *)event
@@ -418,7 +402,7 @@ SResult swSetKeyDownCallback(SWindow* window, pfnSKeyDownCallback callback) {
 
 SResult swSetKeyUpCallback(SWindow* window, pfnSKeyUpCallback callback) {
 	SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
-	_window->keyDownCallback = callback;
+	_window->keyUpCallback = callback;
 	return SWIN_OK;
 }
 
