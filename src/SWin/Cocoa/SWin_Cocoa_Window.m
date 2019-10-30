@@ -7,10 +7,6 @@
     self = [super init];
     
     self->running = YES;
-    self->mouseState = malloc(sizeof(SMouseState));
-    self->mouseState->x = 0;
-    self->mouseState->y = 0;
-    self->mouseState->ldown = 0;
     
     return self;
 }
@@ -19,18 +15,10 @@
     return self->running;
 }
 
-- (SMouseState*) getMouseState {
-    return self->mouseState;
-}
-
 #pragma mark - Window Delegate
 
 - (void)windowWillClose:(NSNotification *)notification {
     self->running = NO;
-}
-
-- (void)mouseMoved:(NSEvent *)event {
-    printf("hello\n");
 }
 
 @end
@@ -51,12 +39,12 @@
 
 @implementation SWinContentView
 
-- (instancetype)initWithSWindow:(SWin_Cocoa_Window *)initWindow
+- (instancetype)initWithSView:(SWin_Cocoa_View *)initView
 {
-	self = [super init];
+	self = [super initWithFrame:initView->bounds];
 	if (self != nil)
 	{
-		window = initWindow;
+		view = initView;
 		trackingArea = nil;
 		
 		[self updateTrackingAreas];
@@ -71,180 +59,111 @@
 	[super dealloc];
 }
 
-- (BOOL)isOpaque
-{
-	return YES;
+- (BOOL)isOpaque { return YES; }
+
+- (BOOL)canBecomeKeyView { return YES; }
+
+- (BOOL)acceptsFirstResponder { return YES; }
+
+- (BOOL)wantsUpdateLayer { return YES; }
+
+- (void)updateLayer {}
+
+- (void)cursorUpdate:(NSEvent *)event {}
+
+- (BOOL)acceptsFirstMouse:(NSEvent *)event { return YES; }
+
+- (void)mouseDown:(NSEvent *)event {
+	if(view->mouseDownCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
+		
+		view->mouseDownCallback(point.x, point.y, SWIN_MOUSE_BUTTON_LEFT);
+	}
 }
 
-- (BOOL)canBecomeKeyView
-{
-	return YES;
-}
-
-- (BOOL)acceptsFirstResponder
-{
-	return YES;
-}
-
-- (BOOL)wantsUpdateLayer
-{
-	return YES;
-}
-
-- (void)updateLayer
-{
-	
-}
-
-- (void)cursorUpdate:(NSEvent *)event
-{
-	
-}
-
-- (BOOL)acceptsFirstMouse:(NSEvent *)event
-{
-	return YES;
-}
-
-- (void)mouseDown:(NSEvent *)event
-{
-	//_glfwInputMouseClick(window,
-	//					 GLFW_MOUSE_BUTTON_LEFT,
-	//					 GLFW_PRESS,
-	//					 translateFlags([event modifierFlags]));
-}
-
-- (void)mouseDragged:(NSEvent *)event
-{
+- (void)mouseDragged:(NSEvent *)event {
 	[self mouseMoved:event];
 }
 
-- (void)mouseUp:(NSEvent *)event
-{
-	//_glfwInputMouseClick(window,
-	//					 GLFW_MOUSE_BUTTON_LEFT,
-	//					 GLFW_RELEASE,
-	//					 translateFlags([event modifierFlags]));
-}
-
-- (void)mouseMoved:(NSEvent *)event
-{
-	//if (window->cursorMode == GLFW_CURSOR_DISABLED)
-	//{
-	//	const double dx = [event deltaX] - window->ns.cursorWarpDeltaX;
-	//	const double dy = [event deltaY] - window->ns.cursorWarpDeltaY;
+- (void)mouseUp:(NSEvent *)event {
+	if(view->mouseUpCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
 		
-	//	_glfwInputCursorPos(window,
-	//						window->virtualCursorPosX + dx,
-	//						window->virtualCursorPosY + dy);
-	//}
-	//else
-	//{
-	//	const NSRect contentRect = [window->ns.view frame];
-	//	// NOTE: The returned location uses base 0,1 not 0,0
-	//	const NSPoint pos = [event locationInWindow];
+		view->mouseUpCallback(point.x, point.y, SWIN_MOUSE_BUTTON_LEFT);
+	}
+}
+
+- (void)mouseMoved:(NSEvent *)event {
+	if(view->mouseMovedCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
 		
-	//	_glfwInputCursorPos(window, pos.x, contentRect.size.height - pos.y);
-	//}
-	
-	//window->ns.cursorWarpDeltaX = 0;
-	//window->ns.cursorWarpDeltaY = 0;
+		view->mouseMovedCallback(point.x, point.y);
+	}
 }
 
-- (void)rightMouseDown:(NSEvent *)event
-{
-	//_glfwInputMouseClick(window,
-	//					 GLFW_MOUSE_BUTTON_RIGHT,
-	//					 GLFW_PRESS,
-	//					 translateFlags([event modifierFlags]));
+- (void)rightMouseDown:(NSEvent *)event {
+	if(view->mouseDownCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
+		
+		view->mouseDownCallback(point.x, point.y, SWIN_MOUSE_BUTTON_RIGHT);
+	}
 }
 
-- (void)rightMouseDragged:(NSEvent *)event
-{
+- (void)rightMouseDragged:(NSEvent *)event {
 	[self mouseMoved:event];
 }
 
-- (void)rightMouseUp:(NSEvent *)event
-{
-	//_glfwInputMouseClick(window,
-	//					 GLFW_MOUSE_BUTTON_RIGHT,
-	//					 GLFW_RELEASE,
-	//					 translateFlags([event modifierFlags]));
+- (void)rightMouseUp:(NSEvent *)event {
+	if(view->mouseUpCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
+		
+		view->mouseUpCallback(point.x, point.y, SWIN_MOUSE_BUTTON_RIGHT);
+	}
 }
 
-- (void)otherMouseDown:(NSEvent *)event
-{
-	//_glfwInputMouseClick(window,
-	//					 (int) [event buttonNumber],
-	//					 GLFW_PRESS,
-	//					 translateFlags([event modifierFlags]));
+- (void)otherMouseDown:(NSEvent *)event {
+	if(view->mouseDownCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
+		
+		view->mouseDownCallback(point.x, point.y, [event buttonNumber]);
+	}
 }
 
-- (void)otherMouseDragged:(NSEvent *)event
-{
+- (void)otherMouseDragged:(NSEvent *)event {
 	[self mouseMoved:event];
 }
 
-- (void)otherMouseUp:(NSEvent *)event
-{
-	//_glfwInputMouseClick(window,
-	//					 (int) [event buttonNumber],
-	//					 GLFW_RELEASE,
-	//					 translateFlags([event modifierFlags]));
-}
-
-- (void)mouseExited:(NSEvent *)event
-{
-	//if (window->cursorMode == GLFW_CURSOR_HIDDEN)
-	//	showCursor(window);
-	
-	//_glfwInputCursorEnter(window, GLFW_FALSE);
-}
-
-- (void)mouseEntered:(NSEvent *)event
-{
-	//if (window->cursorMode == GLFW_CURSOR_HIDDEN)
-	//	hideCursor(window);
-	
-	//_glfwInputCursorEnter(window, GLFW_TRUE);
-}
-
-- (void)viewDidChangeBackingProperties
-{
-	//const NSRect contentRect = [window->ns.view frame];
-	//const NSRect fbRect = [window->ns.view convertRectToBacking:contentRect];
-	
-	//if (fbRect.size.width != window->ns.fbWidth ||
-	//	fbRect.size.height != window->ns.fbHeight)
-	//{
-	//	window->ns.fbWidth  = fbRect.size.width;
-	//	window->ns.fbHeight = fbRect.size.height;
-	//	_glfwInputFramebufferSize(window, fbRect.size.width, fbRect.size.height);
-	//}
-	
-	//const float xscale = fbRect.size.width / contentRect.size.width;
-	//const float yscale = fbRect.size.height / contentRect.size.height;
-	
-	//if (xscale != window->ns.xscale || yscale != window->ns.yscale)
-	//{
-	//	window->ns.xscale = xscale;
-	//	window->ns.yscale = yscale;
-	//	_glfwInputWindowContentScale(window, xscale, yscale);
+- (void)otherMouseUp:(NSEvent *)event {
+	if(view->mouseUpCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
 		
-	//	if (window->ns.retina && window->ns.layer)
-	//		[window->ns.layer setContentsScale:[window->ns.object backingScaleFactor]];
-	//}
+		view->mouseUpCallback(point.x, point.y, [event buttonNumber]);
+	}
 }
 
-- (void)drawRect:(NSRect)rect
-{
-	//_glfwInputWindowDamage(window);
+- (void)mouseExited:(NSEvent *)event {
+	
 }
 
-- (void)updateTrackingAreas
-{
-	if (trackingArea != nil)
-	{
+- (void)mouseEntered:(NSEvent *)event {
+	
+}
+
+- (void)viewDidChangeBackingProperties {
+	
+}
+
+- (void)drawRect:(NSRect)rect {}
+
+- (void)updateTrackingAreas {
+	if (trackingArea != nil) {
 		[self removeTrackingArea:trackingArea];
 		[trackingArea release];
 	}
@@ -265,38 +184,34 @@
 	[super updateTrackingAreas];
 }
 
-- (void)keyDown:(NSEvent *)event
-{
-	if(window->keyDownCallback != NULL) {
-		window->keyDownCallback(__sWin_Cocoa_keycodes[event.keyCode]);
+- (void)keyDown:(NSEvent *)event {
+	if(view->keyDownCallback != NULL) {
+		view->keyDownCallback(__sWin_Cocoa_keycodes[event.keyCode]);
 	}
 }
 
-- (void)keyUp:(NSEvent *)event
-{
-	if(window->keyUpCallback != NULL) {
-		window->keyUpCallback(__sWin_Cocoa_keycodes[event.keyCode]);
+- (void)keyUp:(NSEvent *)event {
+	if(view->keyUpCallback != NULL) {
+		view->keyUpCallback(__sWin_Cocoa_keycodes[event.keyCode]);
 	}
 }
 
-- (void)scrollWheel:(NSEvent *)event
-{
-	//double deltaX = [event scrollingDeltaX];
-	//double deltaY = [event scrollingDeltaY];
+- (void)scrollWheel:(NSEvent *)event {
+	float deltaY = [event scrollingDeltaY];
 	
-	//if ([event hasPreciseScrollingDeltas])
-	//{
-	//	deltaX *= 0.1;
-	//	deltaY *= 0.1;
-	//}
+	if ([event hasPreciseScrollingDeltas]) {
+		deltaY *= 0.1;
+	}
 	
-	//if (fabs(deltaX) > 0.0 || fabs(deltaY) > 0.0)
-	//	_glfwInputScroll(window, deltaX, deltaY);
+	if(view->mouseScrollCallback != NULL) {
+		NSPoint point = [self convertPoint:[event locationInWindow] fromView:nil];
+		point.y = [self bounds].size.height - point.y;
+		
+		view->mouseScrollCallback(point.x, point.y, deltaY);
+	}
 }
 
-- (void)doCommandBySelector:(SEL)selector
-{
-}
+- (void)doCommandBySelector:(SEL)selector {}
 
 @end
 
@@ -320,9 +235,13 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 	
-	result->root = [[SWinContentView alloc] initWithSWindow:result];
-	[result->window setContentView:result->root];
-	[result->window makeFirstResponder:result->root];
+	result->root = ALLOC_S(SWin_Cocoa_View);
+	
+	result->root->bounds = viewRect;
+	
+	result->root->view = [[SWinContentView alloc] initWithSView:result->root];
+	
+	[result->window setContentView:result->root->view];
 	
     [result->window setDelegate:(AppDelegate*)[NSApp delegate]];
     [result->window setAcceptsMouseMovedEvents:YES];
@@ -331,8 +250,15 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
     
     [result->window makeKeyAndOrderFront:nil];
 	
-	result->keyDownCallback = NULL;
-	result->keyUpCallback = NULL;
+	result->root->window = result->window;
+	
+	result->root->keyDownCallback = NULL;
+	result->root->keyUpCallback = NULL;
+	
+	result->root->mouseMovedCallback = NULL;
+	result->root->mouseDownCallback = NULL;
+	result->root->mouseUpCallback = NULL;
+	result->root->mouseScrollCallback = NULL;
 	
     return result;
 }
@@ -345,46 +271,18 @@ SResult swDestroyWindow(SWindow* window) {
 
 void swPollEvents() {
     @autoreleasepool {
-        NSEvent* ev;
-        do {
-            ev = [NSApp nextEventMatchingMask: NSEventMaskAny
-                                    untilDate: nil
-                                       inMode: NSDefaultRunLoopMode
-                                      dequeue: YES];
-            
-            if (ev) {
-                if((ev.type == NSEventTypeMouseMoved || ev.type == NSEventTypeLeftMouseDragged) && ev.window != NULL) {
-                    NSPoint point = [[ev.window contentView] convertPoint:[ev locationInWindow] fromView:nil];
-                    point.y = [[ev.window contentView] bounds].size.height - point.y;
-                    
-                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
-                    SMouseState* mouseState = [delegate getMouseState];
-                    
-                    mouseState->x = point.x;
-                    mouseState->y = point.y;
-                }
-                
-                if(ev.type == NSEventTypeLeftMouseDown) {
-                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
-                    SMouseState* mouseState = [delegate getMouseState];
-                    mouseState->ldown = 1;
-                }
-                
-                if(ev.type == NSEventTypeLeftMouseUp) {
-                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
-                    SMouseState* mouseState = [delegate getMouseState];
-					mouseState->ldown = 0;
-                }
-                
-                if(ev.type == NSEventTypeScrollWheel) {
-                    AppDelegate* delegate = (AppDelegate*)[ev.window delegate];
-                    SMouseState* mouseState = [delegate getMouseState];
-                    mouseState->scroll += ev.scrollingDeltaY/10.0f;
-                }
-				
-                [NSApp sendEvent: ev];
-            }
-        } while (ev);
+		NSEvent* ev = [NSApp nextEventMatchingMask: NSEventMaskAny
+										 untilDate: nil
+											inMode: NSDefaultRunLoopMode
+										   dequeue: YES];
+        while (ev) {
+			[NSApp sendEvent: ev];
+			
+			ev = [NSApp nextEventMatchingMask: NSEventMaskAny
+									untilDate: nil
+									   inMode: NSDefaultRunLoopMode
+									  dequeue: YES];
+        }
     }
 }
 
@@ -394,15 +292,39 @@ uint8_t swCloseRequested(SWindow* window) {
     return (uint8_t)([delegate getRunning] == NO);
 }
 
-SResult swSetKeyDownCallback(SWindow* window, pfnSKeyDownCallback callback) {
-	SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
-	_window->keyDownCallback = callback;
+SResult swSetKeyDownCallback(SView* view, pfnSKeyDownCallback callback) {
+	SWin_Cocoa_View* _view = (SWin_Cocoa_View*)view;
+	_view->keyDownCallback = callback;
 	return SWIN_OK;
 }
 
-SResult swSetKeyUpCallback(SWindow* window, pfnSKeyUpCallback callback) {
-	SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
-	_window->keyUpCallback = callback;
+SResult swSetKeyUpCallback(SView* view, pfnSKeyUpCallback callback) {
+	SWin_Cocoa_View* _view = (SWin_Cocoa_View*)view;
+	_view->keyUpCallback = callback;
+	return SWIN_OK;
+}
+
+SResult swSetMouseMovedCallback(SView* view, pfnSMouseMovedCallback callback) {
+	SWin_Cocoa_View* _view = (SWin_Cocoa_View*)view;
+	_view->mouseMovedCallback = callback;
+	return SWIN_OK;
+}
+
+SResult swSetMouseDownCallback(SView* view, pfnSMouseDownCallback callback) {
+	SWin_Cocoa_View* _view = (SWin_Cocoa_View*)view;
+	_view->mouseDownCallback = callback;
+	return SWIN_OK;
+}
+
+SResult swSetMouseUpCallback(SView* view, pfnSMouseUpCallback callback) {
+	SWin_Cocoa_View* _view = (SWin_Cocoa_View*)view;
+	_view->mouseUpCallback = callback;
+	return SWIN_OK;
+}
+
+SResult swSetMouseScrollCallback(SView* view, pfnSMouseScrollCallback callback) {
+	SWin_Cocoa_View* _view = (SWin_Cocoa_View*)view;
+	_view->mouseScrollCallback = callback;
 	return SWIN_OK;
 }
 
@@ -423,22 +345,41 @@ void swCloseWindow(SWindow* window) {
 
 SView* swGetRootView(SWindow* window) {
     SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
-    return [_window->window contentView];
+    return _window->root;
 }
 
 SView* swCreateView(SView* parent, SRect* bounds) {
-    NSView* rootView = (NSView*)parent;
-    NSView* view = [[NSView alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
-    [rootView addSubview:view];
-    return view;
+	SWin_Cocoa_View* _parent = (SWin_Cocoa_View*)parent;
+	
+	SWin_Cocoa_View* result = ALLOC_S(SWin_Cocoa_View);
+	
+	result->bounds = NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height);
+	
+    NSView* view = [[SWinContentView alloc] initWithSView:result];
+    [_parent->view addSubview:view];
+	
+	result->view = view;
+	
+	result->keyDownCallback = NULL;
+	result->keyUpCallback = NULL;
+	
+	result->mouseMovedCallback = NULL;
+	result->mouseDownCallback = NULL;
+	result->mouseUpCallback = NULL;
+	result->mouseScrollCallback = NULL;
+	
+	result->window = _parent->window;
+	
+    return result;
 }
 
 SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, pfnSButtonCallback callback, void* userData) {
-    NSView* rootView = (NSView*)parent;
+    SWin_Cocoa_View* _parent = (SWin_Cocoa_View*)parent;
+	
     NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
     [button setTitle: @(title)];
-    [button setButtonType:NSMomentaryLightButton];
-    [button setBezelStyle:NSRoundedBezelStyle];
+    [button setButtonType:NSButtonTypeMomentaryLight];
+    [button setBezelStyle:NSBezelStyleRounded];
     
     ButtonData* buttonData = [[ButtonData alloc]
                               initWithCallback:callback
@@ -447,13 +388,14 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, pfnSBut
     [button setTarget:buttonData];
     [button setAction:@selector(buttonPress)];
     
-    [rootView addSubview:button];
+    [_parent->view addSubview:button];
     
     return button;
 }
 
 SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
-    NSView* rootView = (NSView*)parent;
+    SWin_Cocoa_View* _parent = (SWin_Cocoa_View*)parent;
+	
     NSTextField* label = [[NSTextField alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
     [label setStringValue:@(text)];
     label.drawsBackground = NO;
@@ -461,12 +403,13 @@ SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
     label.bordered = YES;
     label.selectable = NO;
     
-    [rootView addSubview:label];
+    [_parent->view addSubview:label];
     return label;
 }
 
 STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
-    NSView* rootView = (NSView*)parent;
+    SWin_Cocoa_View* _parent = (SWin_Cocoa_View*)parent;
+	
     NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
     
     [textField setStringValue:@(text)];
@@ -476,7 +419,7 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
     textField.selectable = YES;
     textField.editable = YES;
     
-    [rootView addSubview:textField];
+    [_parent->view addSubview:textField];
     
 	return textField;
 }
@@ -485,12 +428,6 @@ char* swGetTextFromTextField(STextField* textField) {
     NSTextField* field = (NSTextField*)textField;
     
 	return (char*)[[field stringValue] UTF8String];
-}
-
-SMouseState* swGetMouseState(SWindow* window) {
-    SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
-    AppDelegate* delegate = (AppDelegate*)[_window->window delegate];
-    return [delegate getMouseState];
 }
 
 void swSetViewBackgroundColor(SView* view, SColor color) {

@@ -127,6 +127,10 @@
 #define 	SWIN_KEY_RIGHT_SUPER   347
 #define 	SWIN_KEY_MENU   348
 
+#define 	SWIN_MOUSE_BUTTON_LEFT   0
+#define 	SWIN_MOUSE_BUTTON_RIGHT   1
+#define 	SWIN_MOUSE_BUTTON_MIDDLE   2
+
 typedef void SWindow;
 typedef void SView;
 typedef void SOpenGLContext;
@@ -141,12 +145,6 @@ typedef struct SRect {
     float x, y, width, height;
 	SBool dispose;
 } SRect;
-
-typedef struct SMouseState {
-	float x, y;
-	uint8_t ldown;
-	float scroll;
-} SMouseState;
 
 typedef enum SOpenGLContextProfile {
 	SWIN_OPENGL_CONTEXT_PROFILE_CORE = 1,
@@ -172,6 +170,11 @@ typedef void (*pfnSButtonCallback)(void*);
 typedef void (*pfnSKeyDownCallback)(SKeyCode);
 typedef void (*pfnSKeyUpCallback)(SKeyCode);
 
+typedef void (*pfnSMouseMovedCallback)(float xpos, float ypos);
+typedef void (*pfnSMouseDownCallback)(float xpos, float ypos, int button);
+typedef void (*pfnSMouseUpCallback)(float xpos, float ypos, int button);
+typedef void (*pfnSMouseScrollCallback)(float xpos, float ypos, float scroll);
+
 SResult swInit();
 SResult swInitGL();
 SResult swInitVK();
@@ -182,8 +185,13 @@ void swPollEvents();
 SResult swDraw(SWindow* window);
 uint8_t swCloseRequested(SWindow* window);
 
-SResult swSetKeyDownCallback(SWindow* window, pfnSKeyDownCallback callback);
-SResult swSetKeyUpCallback(SWindow* window, pfnSKeyUpCallback callback);
+SResult swSetKeyDownCallback(SView* view, pfnSKeyDownCallback callback);
+SResult swSetKeyUpCallback(SView* view, pfnSKeyUpCallback callback);
+
+SResult swSetMouseMovedCallback(SView* view, pfnSMouseMovedCallback callback);
+SResult swSetMouseDownCallback(SView* view, pfnSMouseDownCallback callback);
+SResult swSetMouseUpCallback(SView* view, pfnSMouseUpCallback callback);
+SResult swSetMouseScrollCallback(SView* view, pfnSMouseScrollCallback callback);
 
 SResult swDestroyWindow(SWindow* window);
 
@@ -220,8 +228,6 @@ SRect* swMakeRect(float x, float y, float w, float h);
 SRect* swMakeDisposableRect(float x, float y, float w, float h);
 
 void swTerminate();
-
-SMouseState* swGetMouseState(SWindow* window);
 
 SThread* swCreateThread(pfnSThreadCallback callback, void* data);
 SResult swWaitForThread(SThread* thread);

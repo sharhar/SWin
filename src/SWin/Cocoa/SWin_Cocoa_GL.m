@@ -13,7 +13,7 @@ SResult swInitGL() {
 }
 
 SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attribs) {
-    NSView* rootView = (NSView*)parent;
+	SWin_Cocoa_View* _parent = (SWin_Cocoa_View*)parent;
     
     NSOpenGLPixelFormatAttribute openGLversion = NSOpenGLProfileVersionLegacy;
     
@@ -38,7 +38,7 @@ SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attr
     //[rootView addSubview:view];
     
     NSOpenGLContext* context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
-    [context setView:rootView];
+    [context setView:_parent->view];
     
     [context makeCurrentContext];
     

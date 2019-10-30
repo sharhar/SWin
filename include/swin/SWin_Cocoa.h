@@ -1,20 +1,31 @@
 #ifndef SWin_Cocoa_h
 #define SWin_Cocoa_h
 
+#include <swin/SWin.h>
+
 #import <Foundation/Foundation.h>
 #import <Cocoa/Cocoa.h>
 #import <AppKit/NSApplication.h>
 
-typedef struct SWin_Cocoa_Window {
+typedef struct SWin_Cocoa_View {
+	NSRect bounds;
 	NSWindow* window;
-	NSView* root;
+	NSView* view;
 	pfnSKeyDownCallback keyDownCallback;
 	pfnSKeyUpCallback keyUpCallback;
+	pfnSMouseMovedCallback mouseMovedCallback;
+	pfnSMouseDownCallback mouseDownCallback;
+	pfnSMouseUpCallback mouseUpCallback;
+	pfnSMouseScrollCallback mouseScrollCallback;
+} SWin_Cocoa_View;
+
+typedef struct SWin_Cocoa_Window {
+	NSWindow* window;
+	SWin_Cocoa_View* root;
 } SWin_Cocoa_Window;
 
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>{
     BOOL running;
-    SMouseState* mouseState;
 }
 @end
 
@@ -26,11 +37,11 @@ typedef struct SWin_Cocoa_Window {
 
 @interface SWinContentView : NSView
 {
-	SWin_Cocoa_Window* window;
+	SWin_Cocoa_View* view;
 	NSTrackingArea* trackingArea;
 }
 
-- (instancetype)initWithSWindow:(SWin_Cocoa_Window *)initWindow;
+- (instancetype)initWithSView:(SWin_Cocoa_View *)initView;
 
 @end
 
