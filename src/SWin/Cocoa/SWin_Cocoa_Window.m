@@ -79,8 +79,8 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
     return window;
 }
 
-void swDestroyWindow(SWindow* window) {
-    
+SResult swDestroyWindow(SWindow* window) {
+    return SWIN_OK;
 }
 
 void swPollEvents() {
@@ -149,9 +149,11 @@ uint8_t swCloseRequested(SWindow* swin) {
     
 }
 
-void swDraw(SWindow* swin) {
+SResult swDraw(SWindow* swin) {
     NSWindow* window = (NSWindow*)swin;
     [[window contentView] setNeedsDisplay:YES];
+    
+    return SWIN_OK;
 }
 
 void swCloseWindow(SWindow* swin) {
@@ -176,8 +178,8 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* c
     NSView* rootView = (NSView*)parent;
     NSButton* button = [[NSButton alloc] initWithFrame:NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height)];
     [button setTitle: @(title)];
-    [button setButtonType:NSMomentaryLightButton];
-    [button setBezelStyle:NSRoundedBezelStyle];
+    [button setButtonType:NSButtonTypeMomentaryLight];
+    [button setBezelStyle:NSBezelStyleRounded];
     
     ButtonData* buttonData = [[ButtonData alloc]
                               initWithCallback:callback
@@ -223,7 +225,7 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
 char* swGetTextFromTextField(STextField* textField) {
     NSTextField* field = (NSTextField*)textField;
     
-	return [[field stringValue] UTF8String];
+	return (char*)[[field stringValue] UTF8String];
 }
 
 SMouseState* swGetMouseState(SWindow* swin) {

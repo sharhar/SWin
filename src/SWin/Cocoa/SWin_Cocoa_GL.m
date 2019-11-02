@@ -5,8 +5,10 @@
 
 CFBundleRef __sWin_Cocoa_libGL;
 
-void swInitGL() {
+SResult swInitGL() {
     __sWin_Cocoa_libGL = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.opengl"));
+    
+    return SWIN_OK;
 }
 
 SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attribs) {
@@ -45,14 +47,18 @@ SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attr
     return context;
 }
 
-void swMakeContextCurrent(SOpenGLContext* sview) {
+SResult swMakeContextCurrent(SOpenGLContext* sview) {
     NSOpenGLContext* context = (NSOpenGLContext*)sview;
     [context makeCurrentContext];
+    
+    return SWIN_OK;
 }
 
-void swSwapBufers(SOpenGLContext* sview) {
+SResult swSwapBufers(SOpenGLContext* sview) {
     NSOpenGLContext* context = (NSOpenGLContext*)sview;
     [context flushBuffer];
+    
+    return SWIN_OK;
 }
 
 void* swGetProcAddressGL(const char* name) {
@@ -65,6 +71,6 @@ void* swGetProcAddressGL(const char* name) {
     return result;
 }
 
-void swDestroyOpenGLContext(SOpenGLContext* context) {
-    
+SResult swDestroyOpenGLContext(SOpenGLContext* context) {
+    return SWIN_OK;
 }

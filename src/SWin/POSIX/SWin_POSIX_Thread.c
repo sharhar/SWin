@@ -1,6 +1,8 @@
-#include "../../../include/swin/SWin.h"
+#include <swin/SWin.h>
 #include <pthread.h>
 #include <time.h>
+#include <string.h>
+#include <unistd.h>
 
 typedef struct SWin_POSIX_Thread {
 	pthread_t thread;
@@ -38,13 +40,16 @@ SThread* swCreateThread(pfnSThreadCallback callback, void* data) {
 	return result;
 }
 
-void swWaitForThread(SThread* thread) {
+SResult swWaitForThread(SThread* thread) {
 	pthread_join(((SWin_POSIX_Thread*)thread)->thread, NULL);
+    
+    return SWIN_OK;
 }
 
-void swDestroyThread(SThread* thread) {
+SResult swDestroyThread(SThread* thread) {
 	pthread_cancel(((SWin_POSIX_Thread*)thread)->thread);
-
+    
+    return SWIN_OK;
 }
 
 SMutex* swCreateMutex() {
@@ -58,16 +63,22 @@ SMutex* swCreateMutex() {
 	return result;
 }
 
-void swLockMutex(SMutex* mutex) {
+SResult swLockMutex(SMutex* mutex) {
 	pthread_mutex_lock(&((SWin_POSIX_Mutex*)mutex)->mutex);
+    
+    return SWIN_OK;
 }
 
-void swUnlockMutex(SMutex* mutex) {
+SResult swUnlockMutex(SMutex* mutex) {
 	pthread_mutex_unlock(&((SWin_POSIX_Mutex*)mutex)->mutex);
+    
+    return SWIN_OK;
 }
 
-void swDestroyMutex(SMutex* mutex) {
+SResult swDestroyMutex(SMutex* mutex) {
 	pthread_mutex_destroy(&((SWin_POSIX_Mutex*)mutex)->mutex);
+    
+    return SWIN_OK;
 }
 
 void swSleep(uint32_t milliSeconds) {
