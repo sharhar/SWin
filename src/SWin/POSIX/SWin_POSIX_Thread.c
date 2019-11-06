@@ -29,26 +29,36 @@ void* SWin_POSIX_Thread_ThreadFunction(void* data) {
 }
 
 SThread* swCreateThread(pfnSThreadCallback callback, void* data) {
-	SWin_POSIX_Thread* result = (SWin_POSIX_Thread*)malloc(sizeof(SWin_POSIX_Thread));
+    CHECK(callback, "callback was NULL", NULL);
+    
+	SWin_POSIX_Thread* result = ALLOC_S(SWin_POSIX_Thread);
+    CHECK(result, "Failed to allocate SWin_POSIX_Thread", NULL);
 
-	void** datas = malloc(sizeof(void*) * 2);
+	void** datas = ALLOC(void*, 2);
+    CHECK(datas, "Failed to allocate void**", NULL);
+    
 	datas[0] = callback;
 	datas[1] = data;
 
 	pthread_create(&result->thread, NULL, SWin_POSIX_Thread_ThreadFunction, datas);
+    CHECK(result->thread, "pthread_create() failed", NULL);
 
 	return result;
 }
 
 SResult swWaitForThread(SThread* thread) {
+    CHECK(thread, "thread was NULL", SWIN_FAILED);
+	
 	pthread_join(((SWin_POSIX_Thread*)thread)->thread, NULL);
     
     return SWIN_OK;
 }
 
 SResult swDestroyThread(SThread* thread) {
-	pthread_cancel(((SWin_POSIX_Thread*)thread)->thread);
+    CHECK(thread, "thread was NULL", SWIN_FAILED);
     
+	pthread_cancel(((SWin_POSIX_Thread*)thread)->thread);
+
     return SWIN_OK;
 }
 
@@ -64,18 +74,24 @@ SMutex* swCreateMutex() {
 }
 
 SResult swLockMutex(SMutex* mutex) {
+    CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+	
 	pthread_mutex_lock(&((SWin_POSIX_Mutex*)mutex)->mutex);
     
     return SWIN_OK;
 }
 
 SResult swUnlockMutex(SMutex* mutex) {
+    CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+	
 	pthread_mutex_unlock(&((SWin_POSIX_Mutex*)mutex)->mutex);
     
     return SWIN_OK;
 }
 
 SResult swDestroyMutex(SMutex* mutex) {
+    CHECK(mutex, "mutex was NULL", SWIN_FAILED);
+    
 	pthread_mutex_destroy(&((SWin_POSIX_Mutex*)mutex)->mutex);
     
     return SWIN_OK;

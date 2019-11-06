@@ -1,6 +1,9 @@
 #ifndef SWin_X11_h
 #define SWin_X11_h
 
+#include <swin/SWin.h>
+#include <swin/SWin_X11_Base.h>
+
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
@@ -12,20 +15,13 @@
 
 struct SWin_X11_Window;
 
-typedef enum SWin_X11_View_Type {
-	SWIN_X11_VIEW_TYPE_VIEW = 1,
-	SWIN_X11_VIEW_TYPE_OPENGL = 2,
-	SWIN_X11_VIEW_TYPE_BUTTON = 3,
-} SWin_X11_View_Type;
-
 typedef struct SWin_X11_View {
-    Window window;
+	SWin_X11_Base_View baseView;
     GC gc;
     int width, height;
     struct SWin_X11_View** children;
     int childCount;
     SColor bg;
-	SWin_X11_View_Type type;
     struct SWin_X11_Window* win;
 } SWin_X11_View;
 
@@ -52,8 +48,6 @@ typedef struct SWin_X11_Button {
 	SWin_X11_ButtonCallback buttonRelease;
 } SWin_X11_Button;
 
-extern Display* __sWin_X11_display;
-extern int __sWin_X11_screen;
 extern unsigned long __sWin_X11_black;
 extern unsigned long __sWin_X11_white;
 extern XEvent __sWin_X11_event;

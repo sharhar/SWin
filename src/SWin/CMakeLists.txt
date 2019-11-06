@@ -20,15 +20,40 @@ elseif(MSVC)
 			SWin_Utils.c)
 	set(SWIN_LIBRARIES SWin PARENT_SCOPE)
 else()
-	add_library(SWin ${SWIN_HEADERS}
-			X11/SWin_X11_GL.c
-			X11/SWin_X11_VK.c
-			X11/SWin_X11_Window.c
-			X11/SWin_X11_Utils.c
-			POSIX/SWin_POSIX_Thread.c
-			SWin_Utils.c)
 
-	set(SWIN_LIBRARIES SWin -lX11 -ldl -lpthread PARENT_SCOPE)
+	FIND_PACKAGE(PkgConfig QUIET)
+	PKG_CHECK_MODULES(GTK3 QUIET gtk+-3.0)
+
+	if (GTK3_FOUND)
+		INCLUDE_DIRECTORIES(${GTK3_INCLUDE_DIRS})
+		LINK_DIRECTORIES(${GTK3_LIBRARY_DIRS})
+
+		ADD_DEFINITIONS(${GTK3_CFLAGS_OTHER})
+
+		add_library(SWin ${SWIN_HEADERS}
+				GLX/SWin_GLX.c
+				GTK/SWin_GTK_VK.c
+				GTK/SWin_GTK_Window.c
+				GTK/SWin_GTK_Utils.c
+				POSIX/SWin_POSIX_Thread.c
+				SWin_Utils.c)
+
+		set(SWIN_LIBRARIES SWin -lX11 -ldl -lpthread ${GTK3_LIBRARIES} PARENT_SCOPE)
+
+	else()
+		add_library(SWin ${SWIN_HEADERS}
+				GLX/SWin_GLX.c
+				X11/SWin_X11_VK.c
+				X11/SWin_X11_Window.c
+				X11/SWin_X11_Utils.c
+				POSIX/SWin_POSIX_Thread.c
+				SWin_Utils.c)
+
+		set(SWIN_LIBRARIES SWin -lX11 -ldl -lpthread PARENT_SCOPE)
+
+	endif()
 endif()
 
-target_include_directories (SWin PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../../include)
+set(SWIN_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../../include CACHE STRING "")
+
+target_include_directories (SWin PUBLIC ${SWIN_HEADERS})

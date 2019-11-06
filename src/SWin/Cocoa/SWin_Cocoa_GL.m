@@ -7,12 +7,14 @@ CFBundleRef __sWin_Cocoa_libGL;
 
 SResult swInitGL() {
     __sWin_Cocoa_libGL = CFBundleGetBundleWithIdentifier(CFSTR("com.apple.opengl"));
-    
+	
+    CHECK(__sWin_Cocoa_libGL, "could not load opengl", SWIN_FAILED);
+	
     return SWIN_OK;
 }
 
 SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attribs) {
-    NSView* rootView = (NSView*)parent;
+	SWin_Cocoa_View* _parent = (SWin_Cocoa_View*)parent;
     
     NSOpenGLPixelFormatAttribute openGLversion = NSOpenGLProfileVersionLegacy;
     
@@ -37,7 +39,7 @@ SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attr
     //[rootView addSubview:view];
     
     NSOpenGLContext* context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
-    [context setView:rootView];
+    [context setView:_parent->view];
     
     [context makeCurrentContext];
     
@@ -47,17 +49,22 @@ SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attr
     return context;
 }
 
-SResult swMakeContextCurrent(SOpenGLContext* sview) {
-    NSOpenGLContext* context = (NSOpenGLContext*)sview;
-    [context makeCurrentContext];
+
+SResult swMakeContextCurrent(SOpenGLContext* context) {
+    CHECK(context, "context was NULL", SWIN_FAILED);
     
+    NSOpenGLContext* _context = (NSOpenGLContext*)context;
+    [_context makeCurrentContext];
+	
     return SWIN_OK;
 }
 
-SResult swSwapBufers(SOpenGLContext* sview) {
-    NSOpenGLContext* context = (NSOpenGLContext*)sview;
-    [context flushBuffer];
+SResult swSwapBufers(SOpenGLContext* context) {
+    CHECK(context, "context was NULL", SWIN_FAILED);
     
+    NSOpenGLContext* _context = (NSOpenGLContext*)context;
+    [_context flushBuffer];
+	
     return SWIN_OK;
 }
 
@@ -72,5 +79,7 @@ void* swGetProcAddressGL(const char* name) {
 }
 
 SResult swDestroyOpenGLContext(SOpenGLContext* context) {
+    CHECK(context, "context was NULL", SWIN_FAILED);
+    
     return SWIN_OK;
 }
