@@ -34,11 +34,7 @@ SOpenGLContext* swCreateOpenGLContext(SView* parent, SOpenGLContextAttribs* attr
         0
     };
     
-    NSOpenGLPixelFormat* pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:glattribs];
-    //NSOpenGLView* view = [[NSOpenGLView alloc] initWithFrame:NSMakeRect(10, 10, 100, 100) pixelFormat:pixelFormat];
-    //[rootView addSubview:view];
-    
-    NSOpenGLContext* context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
+    NSOpenGLContext* context = [[NSOpenGLContext alloc] initWithFormat:[[NSOpenGLPixelFormat alloc] initWithAttributes:glattribs] shareContext:nil];
     [context setView:_parent->view];
     
     [context makeCurrentContext];

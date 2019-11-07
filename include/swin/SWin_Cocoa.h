@@ -21,21 +21,22 @@ typedef struct SWin_Cocoa_View {
 
 typedef struct SWin_Cocoa_Window {
 	NSWindow* window;
+	BOOL* running;
 	SWin_Cocoa_View* root;
 } SWin_Cocoa_Window;
 
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>{
+@interface SWin_Cocoa_AppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>{
     BOOL running;
 }
 @end
 
-@interface ButtonData : NSObject  {
+@interface SWin_Cocoa_ButtonData : NSObject  {
     void* data;
     void (*pressCallback) (void* data);
 }
 @end
 
-@interface SWinContentView : NSView
+@interface SWin_Cocoa_SWinContentView : NSView
 {
 	SWin_Cocoa_View* view;
 	NSTrackingArea* trackingArea;
@@ -46,5 +47,8 @@ typedef struct SWin_Cocoa_Window {
 @end
 
 extern short int __sWin_Cocoa_keycodes[256];
+extern double __sWin_POSIX_startTime;
+
+double _swGetRawTime();
 
 #endif

@@ -5,14 +5,14 @@ Swin_Vk* initVk(SView* view) {
 	return NULL;
 }
 
-void renderVk(Swin_Vk* ctx) {
+void renderVk(Swin_Vk* ctx, double red, double green, double blue) {
 	
 }
 #else
 
 #define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
-#include <malloc.h>
+#include <stdio.h>
 
 typedef struct ContextVK {
 	VkInstance instance;
@@ -26,6 +26,12 @@ typedef struct ContextVK {
 	VkCommandPool commandPool;
 	VkCommandBuffer cmdBuffer;
 	VkImage* presentImages;
+	VkImage backImage;
+	VkImageView backImageView;
+	VkDeviceMemory imageMemory;
+	VkRenderPass renderPass;
+	VkFramebuffer frameBuffer;
+	uint32_t width, height;
 } ContextVK;
 
 PFN_vkCreateInstance __vkCreateInstance;
@@ -57,6 +63,17 @@ PFN_vkResetCommandBuffer __vkResetCommandBuffer;
 PFN_vkCreateImageView __vkCreateImageView;
 PFN_vkAcquireNextImageKHR __vkAcquireNextImageKHR;
 PFN_vkQueuePresentKHR __vkQueuePresentKHR;
+PFN_vkCreateImage __vkCreateImage;
+PFN_vkGetImageMemoryRequirements __vkGetImageMemoryRequirements;
+PFN_vkGetPhysicalDeviceMemoryProperties __vkGetPhysicalDeviceMemoryProperties;
+PFN_vkAllocateMemory __vkAllocateMemory;
+PFN_vkBindImageMemory __vkBindImageMemory;
+PFN_vkQueueWaitIdle __vkQueueWaitIdle;
+PFN_vkCreateRenderPass __vkCreateRenderPass;
+PFN_vkCreateFramebuffer __vkCreateFramebuffer;
+PFN_vkCmdBeginRenderPass __vkCmdBeginRenderPass;
+PFN_vkCmdEndRenderPass __vkCmdEndRenderPass;
+PFN_vkCmdCopyImage __vkCmdCopyImage;
 
 Swin_Vk* initVk(SView* view) {
 	swInitVK();
@@ -116,6 +133,17 @@ Swin_Vk* initVk(SView* view) {
 	__vkCreateImageView = swGetProcAddressVK(context->instance, "vkCreateImageView");
 	__vkAcquireNextImageKHR = swGetProcAddressVK(context->instance, "vkAcquireNextImageKHR");
 	__vkQueuePresentKHR = swGetProcAddressVK(context->instance, "vkQueuePresentKHR");
+	__vkCreateImage = swGetProcAddressVK(context->instance, "vkCreateImage");
+	__vkGetImageMemoryRequirements = swGetProcAddressVK(context->instance, "vkGetImageMemoryRequirements");
+	__vkGetPhysicalDeviceMemoryProperties = swGetProcAddressVK(context->instance, "vkGetPhysicalDeviceMemoryProperties");
+	__vkAllocateMemory = swGetProcAddressVK(context->instance, "vkAllocateMemory");
+	__vkBindImageMemory = swGetProcAddressVK(context->instance, "vkBindImageMemory");
+	__vkQueueWaitIdle = swGetProcAddressVK(context->instance, "vkQueueWaitIdle");
+	__vkCreateRenderPass = swGetProcAddressVK(context->instance, "vkCreateRenderPass");
+	__vkCreateFramebuffer = swGetProcAddressVK(context->instance, "vkCreateFramebuffer");
+	__vkCmdBeginRenderPass = swGetProcAddressVK(context->instance, "vkCmdBeginRenderPass");
+	__vkCmdEndRenderPass = swGetProcAddressVK(context->instance, "vkCmdEndRenderPass");
+	__vkCmdCopyImage = swGetProcAddressVK(context->instance, "vkCmdCopyImage");
 	
 	uint32_t physicalDeviceCount = 0;
 	__vkEnumeratePhysicalDevices(context->instance, &physicalDeviceCount, NULL);
@@ -223,6 +251,9 @@ Swin_Vk* initVk(SView* view) {
 		height = surfaceResolution.height;
 	}
 	
+	context->width = width;
+	context->height = height;
+	
 	VkSurfaceTransformFlagBitsKHR preTransform = surfaceCapabilities.currentTransform;
 	if (surfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
 		preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
@@ -253,7 +284,7 @@ Swin_Vk* initVk(SView* view) {
 	swapChainCreateInfo.imageExtent = surfaceResolution;
 	swapChainCreateInfo.imageArrayLayers = 1;
 	swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;   // <--
+	swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 	swapChainCreateInfo.queueFamilyIndexCount = 0;
 	swapChainCreateInfo.pQueueFamilyIndices = NULL;
 	swapChainCreateInfo.preTransform = preTransform;
@@ -370,14 +401,332 @@ Swin_Vk* initVk(SView* view) {
 		__vkCreateImageView(context->device, &presentImagesViewCreateInfo, NULL, &presentImageViews[i]);
 	}
 	
+	VkImageCreateInfo imageCreateInfo;
+	memset(&imageCreateInfo, 0, sizeof(VkImageCreateInfo));
+	imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+	imageCreateInfo.format = colorFormat;
+	imageCreateInfo.extent.width = width;
+	imageCreateInfo.extent.height = height;
+	imageCreateInfo.extent.depth = 1;
+	imageCreateInfo.mipLevels = 1;
+	imageCreateInfo.arrayLayers = 1;
+	imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+	imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+	imageCreateInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	imageCreateInfo.queueFamilyIndexCount = 0;
+	imageCreateInfo.pQueueFamilyIndices = NULL;
+	imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	
+	__vkCreateImage(context->device, &imageCreateInfo, NULL, &context->backImage);
+	
+	VkMemoryRequirements memoryRequirements;
+	memset(&memoryRequirements, 0, sizeof(VkMemoryRequirements));
+	__vkGetImageMemoryRequirements(context->device, context->backImage, &memoryRequirements);
+	
+	VkMemoryAllocateInfo imageAllocateInfo;
+	memset(&imageAllocateInfo, 0, sizeof(VkMemoryAllocateInfo));
+	imageAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	imageAllocateInfo.allocationSize = memoryRequirements.size;
+	
+	VkPhysicalDeviceMemoryProperties memoryProperties;
+	__vkGetPhysicalDeviceMemoryProperties(context->physicalDevice, &memoryProperties);
+	
+	uint32_t memoryTypeBits = memoryRequirements.memoryTypeBits;
+	for (uint32_t i = 0; i < 32; ++i) {
+		VkMemoryType memoryType = memoryProperties.memoryTypes[i];
+		if (memoryTypeBits & 1) {
+			if ((memoryType.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+				imageAllocateInfo.memoryTypeIndex = i;
+				break;
+			}
+		}
+		memoryTypeBits = memoryTypeBits >> 1;
+	}
+	
+	__vkAllocateMemory(context->device, &imageAllocateInfo, NULL, &context->imageMemory);
+	
+	__vkBindImageMemory(context->device, context->backImage, context->imageMemory, 0);
+	
+	__vkBeginCommandBuffer(context->cmdBuffer, &beginInfo);
+	
+	VkImageMemoryBarrier layoutTransitionBarrier;
+	memset(&layoutTransitionBarrier, 0, sizeof(VkImageMemoryBarrier));
+	layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	layoutTransitionBarrier.srcAccessMask = 0;
+	layoutTransitionBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	layoutTransitionBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	layoutTransitionBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.image = context->backImage;
+	VkImageSubresourceRange resourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+	layoutTransitionBarrier.subresourceRange = resourceRange;
+	
+	__vkCmdPipelineBarrier(context->cmdBuffer,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  0,
+								  0, NULL,
+								  0, NULL,
+								  1, &layoutTransitionBarrier);
+	
+	__vkEndCommandBuffer(context->cmdBuffer);
+	
+	VkSubmitInfo submitInfo;
+	memset(&submitInfo, 0, sizeof(VkSubmitInfo));
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitSemaphores = NULL;
+	submitInfo.pWaitDstStageMask = NULL;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &context->cmdBuffer;
+	submitInfo.signalSemaphoreCount = 0;
+	submitInfo.pSignalSemaphores = NULL;
+	
+	__vkQueueSubmit(context->queue, 1, &submitInfo, VK_NULL_HANDLE);
+	
+	__vkQueueWaitIdle(context->queue);
+	__vkResetCommandBuffer(context->cmdBuffer, 0);
+	
+	VkImageViewCreateInfo imageViewCreateInfo;
+	memset(&imageViewCreateInfo, 0, sizeof(VkImageViewCreateInfo));
+	imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	imageViewCreateInfo.image = context->backImage;
+	imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	imageViewCreateInfo.format = colorFormat;
+	imageViewCreateInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+	imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+	imageViewCreateInfo.subresourceRange.levelCount = 1;
+	imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+	imageViewCreateInfo.subresourceRange.layerCount = 1;
+	
+	__vkCreateImageView(context->device, &imageViewCreateInfo, NULL, &context->backImageView);
+	
+	VkAttachmentDescription passAttachment;
+	memset(&passAttachment, 0, sizeof(VkAttachmentDescription));
+	passAttachment.format = colorFormat;
+	passAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	passAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	passAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	passAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	passAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	passAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	passAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	
+	VkAttachmentReference colorAttachmentReference;
+	memset(&colorAttachmentReference, 0, sizeof(VkAttachmentReference));
+	colorAttachmentReference.attachment = 0;
+	colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	
+	VkSubpassDescription subpass;
+	memset(&subpass, 0, sizeof(VkSubpassDescription));
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorAttachmentReference;
+	
+	VkRenderPassCreateInfo renderPassCreateInfo;
+	memset(&renderPassCreateInfo, 0, sizeof(VkRenderPassCreateInfo));
+	renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassCreateInfo.attachmentCount = 1;
+	renderPassCreateInfo.pAttachments = &passAttachment;
+	renderPassCreateInfo.subpassCount = 1;
+	renderPassCreateInfo.pSubpasses = &subpass;
+	
+	__vkCreateRenderPass(context->device, &renderPassCreateInfo, NULL, &context->renderPass);
+	
+	VkFramebufferCreateInfo frameBufferCreateInfo;
+	memset(&frameBufferCreateInfo, 0, sizeof(VkFramebufferCreateInfo));
+	frameBufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	frameBufferCreateInfo.renderPass = context->renderPass;
+	frameBufferCreateInfo.attachmentCount = 1;
+	frameBufferCreateInfo.pAttachments = &context->backImageView;
+	frameBufferCreateInfo.width = width;
+	frameBufferCreateInfo.height = height;
+	frameBufferCreateInfo.layers = 1;
+	
+	__vkCreateFramebuffer(context->device, &frameBufferCreateInfo, NULL, &context->frameBuffer);
+	
 	return context;
 }
 
-void renderVk(Swin_Vk* ctx) {
+void renderVk(Swin_Vk* ctx, double red, double green, double blue) {
 	ContextVK* context = (ContextVK*)ctx;
 	
 	uint32_t nextImageIdx;
 	__vkAcquireNextImageKHR(context->device, context->swapChain, UINT64_MAX, VK_NULL_HANDLE, VK_NULL_HANDLE, &nextImageIdx);
+	
+	VkCommandBufferBeginInfo beginInfo;
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.pNext = NULL;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	beginInfo.pInheritanceInfo = NULL;
+	
+	__vkBeginCommandBuffer(context->cmdBuffer, &beginInfo);
+	
+	VkImageMemoryBarrier layoutTransitionBarrier;
+	memset(&layoutTransitionBarrier, 0, sizeof(VkImageMemoryBarrier));
+	layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	layoutTransitionBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	layoutTransitionBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+	VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	layoutTransitionBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	layoutTransitionBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.image = context->backImage;
+	layoutTransitionBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	layoutTransitionBarrier.subresourceRange.baseMipLevel = 0;
+	layoutTransitionBarrier.subresourceRange.levelCount = 1;
+	layoutTransitionBarrier.subresourceRange.baseArrayLayer = 0;
+	layoutTransitionBarrier.subresourceRange.layerCount = 1;
+	
+	__vkCmdPipelineBarrier(context->cmdBuffer,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  0,
+								  0, NULL,
+								  0, NULL,
+								  1, &layoutTransitionBarrier);
+	
+	VkClearValue clearValue[] = {
+		{ red, green, blue, 1.0 },
+		{ 1.0, 0.0 } };
+	
+	VkRenderPassBeginInfo renderPassBeginInfo;
+	memset(&renderPassBeginInfo, 0, sizeof(VkRenderPassBeginInfo));
+	renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderPassBeginInfo.renderPass = context->renderPass;
+	renderPassBeginInfo.framebuffer = context->frameBuffer;
+	renderPassBeginInfo.renderArea.offset.x = 0;
+	renderPassBeginInfo.renderArea.offset.y = 0;
+	renderPassBeginInfo.renderArea.extent.width = context->width;
+	renderPassBeginInfo.renderArea.extent.height = context->height;
+	renderPassBeginInfo.clearValueCount = 2;
+	renderPassBeginInfo.pClearValues = clearValue;
+	__vkCmdBeginRenderPass(context->cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	
+	__vkCmdEndRenderPass(context->cmdBuffer);
+	
+	VkImageMemoryBarrier prePresentBarrier;
+	memset(&prePresentBarrier, 0, sizeof(VkImageMemoryBarrier));
+	prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	prePresentBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+	prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+	prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	prePresentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	prePresentBarrier.subresourceRange.baseMipLevel = 0;
+	prePresentBarrier.subresourceRange.levelCount = 1;
+	prePresentBarrier.subresourceRange.baseArrayLayer = 0;
+	prePresentBarrier.subresourceRange.layerCount = 1;
+	prePresentBarrier.image = context->backImage;
+	
+	__vkCmdPipelineBarrier(context->cmdBuffer,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  0,
+								  0, NULL,
+								  0, NULL,
+								  1, &prePresentBarrier);
+	
+	memset(&layoutTransitionBarrier, 0, sizeof(VkImageMemoryBarrier));
+	layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	layoutTransitionBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	layoutTransitionBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	layoutTransitionBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	layoutTransitionBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.image = context->presentImages[nextImageIdx];
+	layoutTransitionBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	layoutTransitionBarrier.subresourceRange.baseMipLevel = 0;
+	layoutTransitionBarrier.subresourceRange.levelCount = 1;
+	layoutTransitionBarrier.subresourceRange.baseArrayLayer = 0;
+	layoutTransitionBarrier.subresourceRange.layerCount = 1;
+	
+	__vkCmdPipelineBarrier(context->cmdBuffer,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  0,
+								  0, NULL,
+								  0, NULL,
+								  1, &layoutTransitionBarrier);
+	
+	VkImageSubresourceLayers subResource;
+	memset(&subResource, 0, sizeof(VkImageSubresourceLayers));
+	subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	subResource.baseArrayLayer = 0;
+	subResource.mipLevel = 0;
+	subResource.layerCount = 1;
+	
+	VkImageCopy region;
+	memset(&region, 0, sizeof(VkImageCopy));
+	region.srcSubresource = subResource;
+	region.dstSubresource = subResource;
+	region.srcOffset.x = 0;
+	region.srcOffset.y = 0;
+	region.srcOffset.z = 0;
+	region.dstOffset.x = 0;
+	region.dstOffset.y = 0;
+	region.dstOffset.z = 0;
+	region.extent.width = context->width;
+	region.extent.height = context->height;
+	region.extent.depth = 1;
+	
+	__vkCmdCopyImage(
+							context->cmdBuffer,
+							context->backImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							context->presentImages[nextImageIdx], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							1, &region);
+	
+	memset(&layoutTransitionBarrier, 0, sizeof(VkImageMemoryBarrier));
+	layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+	layoutTransitionBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	layoutTransitionBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+	layoutTransitionBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+	layoutTransitionBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+	layoutTransitionBarrier.image = context->presentImages[nextImageIdx];
+	layoutTransitionBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	layoutTransitionBarrier.subresourceRange.baseMipLevel = 0;
+	layoutTransitionBarrier.subresourceRange.levelCount = 1;
+	layoutTransitionBarrier.subresourceRange.baseArrayLayer = 0;
+	layoutTransitionBarrier.subresourceRange.layerCount = 1;
+	
+	__vkCmdPipelineBarrier(context->cmdBuffer,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								  0,
+								  0, NULL,
+								  0, NULL,
+								  1, &layoutTransitionBarrier);
+	
+	__vkEndCommandBuffer(context->cmdBuffer);
+	
+	VkSubmitInfo submitInfo;
+	memset(&submitInfo, 0, sizeof(VkSubmitInfo));
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.waitSemaphoreCount = 0;
+	submitInfo.pWaitSemaphores = NULL;
+	submitInfo.pWaitDstStageMask = NULL;
+	submitInfo.commandBufferCount = 1;
+	submitInfo.pCommandBuffers = &context->cmdBuffer;
+	submitInfo.signalSemaphoreCount = 0;
+	submitInfo.pSignalSemaphores = NULL;
+	
+	__vkQueueSubmit(context->queue, 1, &submitInfo, VK_NULL_HANDLE);
+	
+	__vkQueueWaitIdle(context->queue);
+	__vkResetCommandBuffer(context->cmdBuffer, 0);
 	
 	VkPresentInfoKHR presentInfo;
 	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

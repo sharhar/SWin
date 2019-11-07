@@ -1,11 +1,14 @@
 #include <swin/SWin.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "vulkan_test.h"
 
 #define GL_VERSION 0x1F02
 #define GL_COLOR_BUFFER_BIT 0x00004000
 #define GL_TRIANGLES 0x0004
+
+#define TWO_PI_OVER_THREE 2.09439510239
 
 #ifdef WIN32
 #define pfnglprefunc __stdcall *
@@ -52,7 +55,7 @@ void renderFunction(RenderInfo* info) {
 	attribs.major = 2;
 	attribs.minor = 1;
 	attribs.debug = 1;
-	attribs.swapInterval = 1;
+	attribs.swapInterval = 0;
 	attribs.forwardCompat = 1;
 	attribs.profile = SWIN_OPENGL_CONTEXT_PROFILE_COMPATIBILITY;
 
@@ -86,15 +89,13 @@ void renderFunction(RenderInfo* info) {
 		__glVertex2f( 0.69f, -0.4f);
 		__glEnd();
         
-        swSleep(10);
+        swSleep(5);
 
 		swSwapBufers(context);
 	}
 
 	swDestroyOpenGLContext(context);
 }
-
-
 
 int main(int argc, const char * argv[]) {
     swInit();
@@ -131,6 +132,7 @@ int main(int argc, const char * argv[]) {
 	__glGetString = swGetProcAddressGL("glGetString");
 	__glRotatef = swGetProcAddressGL("glRotatef");
 
+	
 	running = 1;
 
 	RenderInfo renderInfos[4];
@@ -178,8 +180,8 @@ int main(int argc, const char * argv[]) {
 	double currentTime = 0;
 
     while (!swCloseRequested(window)) {
-       currentTime = swGetTime();
-        
+		currentTime = swGetTime();
+		
         frames++;
         if(currentTime - startTime >= 1) {
             startTime = currentTime;
@@ -189,10 +191,10 @@ int main(int argc, const char * argv[]) {
         }
 
         swPollEvents();
+		
+		swSleep(5);
 
-        swSleep(10);
-
-		renderVk(vkContext);
+		renderVk(vkContext, (cos(swGetTime())+1.0)/2.0, (cos(swGetTime()+TWO_PI_OVER_THREE)+1.0)/2.0, (cos(swGetTime()+2*TWO_PI_OVER_THREE)+1.0)/2.0);
 
 		swDraw(window);
     }

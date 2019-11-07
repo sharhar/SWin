@@ -130,17 +130,19 @@ SResult swInit() {
     
     [NSApplication sharedApplication];
     
-    [NSApp setDelegate:[[AppDelegate alloc] init]];
+    [NSApp setDelegate:[[SWin_Cocoa_AppDelegate alloc] init]];
     
     [NSApp finishLaunching];
 	
 	__swCreateKeyTables();
+	
+	__sWin_POSIX_startTime = _swGetRawTime();
 
     return SWIN_OK;
 }
 
 void swTerminate() {
-    [((AppDelegate*)[NSApp delegate]) dealloc];
+    [((SWin_Cocoa_AppDelegate*)[NSApp delegate]) dealloc];
 }
 
 void swPopup(SWindow* window, char* title, char* text) {
@@ -150,8 +152,4 @@ void swPopup(SWindow* window, char* title, char* text) {
     
     [[_window contentView] addSubview:popup];
     [popup setNeedsDisplay:YES];
-}
-
-double swGetTime() {
-    return [[[NSDate alloc] init] timeIntervalSinceReferenceDate];
 }

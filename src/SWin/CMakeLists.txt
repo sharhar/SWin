@@ -4,12 +4,14 @@ file(GLOB_RECURSE SWIN_HEADERS "${CMAKE_SOURCE_DIR}/include/*.h")
 
 if(APPLE)
 	add_library(SWin ${SWIN_HEADERS} 
-			Cocoa/SWin_Cocoa_GL.m 
+			Cocoa/SWin_Cocoa_GL.m
+ 			Cocoa/SWin_Cocoa_VK.m 
 			Cocoa/SWin_Cocoa_Utils.m 
 			Cocoa/SWin_Cocoa_Window.m 
 			POSIX/SWin_POSIX_Thread.c
 			SWin_Utils.c)
-	set(SWIN_LIBRARIES SWin PARENT_SCOPE)
+	find_library(QUARTZCORE_LIBRARY QuartzCore)
+	set(SWIN_LIBRARIES SWin ${QUARTZCORE_LIBRARY} PARENT_SCOPE)
 elseif(MSVC)
 	add_library(SWin ${SWIN_HEADERS}
 			Win32/SWin_Win32_GL.c

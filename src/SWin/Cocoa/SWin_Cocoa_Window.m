@@ -1,7 +1,7 @@
 #include <swin/SWin.h>
 #include <swin/SWin_Cocoa.h>
 
-@implementation AppDelegate
+@implementation SWin_Cocoa_AppDelegate
 
 - (id) init {
     self = [super init];
@@ -11,8 +11,8 @@
     return self;
 }
 
-- (BOOL) getRunning {
-    return self->running;
+- (BOOL*) getRunning {
+    return &self->running;
 }
 
 #pragma mark - Window Delegate
@@ -23,7 +23,7 @@
 
 @end
 
-@implementation ButtonData
+@implementation SWin_Cocoa_ButtonData
 
 - (id) initWithCallback:(void*)callback data:(void*)userData {
     self->pressCallback = callback;
@@ -37,7 +37,7 @@
 
 @end
 
-@implementation SWinContentView
+@implementation SWin_Cocoa_SWinContentView
 
 - (instancetype)initWithSView:(SWin_Cocoa_View *)initView
 {
@@ -239,11 +239,15 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	
 	result->root->bounds = viewRect;
 	
-	result->root->view = [[SWinContentView alloc] initWithSView:result->root];
+	result->root->view = [[SWin_Cocoa_SWinContentView alloc] initWithSView:result->root];
 	
 	[result->window setContentView:result->root->view];
 	
-    [result->window setDelegate:(AppDelegate*)[NSApp delegate]];
+	SWin_Cocoa_AppDelegate* delegate = (SWin_Cocoa_AppDelegate*)[NSApp delegate];
+	
+	result->running = [delegate getRunning];
+	
+    [result->window setDelegate:delegate];
     [result->window setAcceptsMouseMovedEvents:YES];
     
     [result->window setTitle:@(title)];
@@ -288,8 +292,7 @@ void swPollEvents() {
 
 uint8_t swCloseRequested(SWindow* window) {
     SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
-    AppDelegate* delegate = (AppDelegate*)[_window->window delegate];
-    return (uint8_t)([delegate getRunning] == NO);
+	return (uint8_t)(*_window->running == NO);
 }
 
 
@@ -333,7 +336,7 @@ SResult swDraw(SWindow* window) {
     CHECK(window, "window was NULL", SWIN_FAILED);
     
     SWin_Cocoa_Window* _window = (SWin_Cocoa_Window*)window;
-    [[_window->window contentView] setNeedsDisplay:YES];
+    //[_window->root->view setNeedsDisplay:YES]; /* This line causes a memory leak and does not seem to affect the application */
     
     return SWIN_OK;
 }
@@ -356,7 +359,7 @@ SView* swCreateView(SView* parent, SRect* bounds) {
 	
 	result->bounds = NSMakeRect(bounds->x, bounds->y, bounds->width, bounds->height);
 	
-    NSView* view = [[SWinContentView alloc] initWithSView:result];
+    NSView* view = [[SWin_Cocoa_SWinContentView alloc] initWithSView:result];
     [_parent->view addSubview:view];
 	
 	result->view = view;
@@ -382,7 +385,7 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, pfnSBut
     [button setButtonType:NSButtonTypeMomentaryLight];
     [button setBezelStyle:NSBezelStyleRounded];
     
-    ButtonData* buttonData = [[ButtonData alloc]
+    SWin_Cocoa_ButtonData* buttonData = [[SWin_Cocoa_ButtonData alloc]
                               initWithCallback:callback
                               data:userData];
     
