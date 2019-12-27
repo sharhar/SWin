@@ -17,6 +17,11 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	result->type = TYPE_SWIN_WIN32_WINDOW;
 	result->view.type = TYPE_SWIN_WIN32_VIEW;
 
+	result->view.mouseDownCallback = NULL;
+	result->view.mouseUpCallback = NULL;
+	result->view.mouseMovedCallback = NULL;
+	result->view.mouseScrollCallback = NULL;
+
 	int n;
 	WNDCLASSEX wc;
 	LOGPALETTE* lpPal;
@@ -57,11 +62,9 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	ZeroMemory(&result->msg, sizeof(MSG));
 	result->close = 0;
 
-	SWin_Win32_RootPointer* root = ALLOC_S(SWin_Win32_RootPointer);
-	CHECK(root, "Failed to Allocate RootPointer", NULL);
+	result->view.window = result;
 
-	root->window = result;
-	SetWindowLongPtr(result->view.hWnd, GWLP_USERDATA, (LONG_PTR)root);
+	SetWindowLongPtr(result->view.hWnd, GWLP_USERDATA, (LONG_PTR)&result->view);
 
 	SetLayeredWindowAttributes(result->view.hWnd, RGB(0, 0, 0), 255, LWA_ALPHA);
 	ShowWindow(result->view.hWnd, SW_SHOW);
@@ -70,13 +73,6 @@ SWindow* swCreateWindow(int width, int height, const char* title) {
 	SetFocus(result->view.hWnd);
 
 	SendMessage(result->view.hWnd, WM_SETFONT, __sWin_Win32_font, TRUE);
-
-	result->mouseState = ALLOC_S(SMouseState);
-	CHECK(result->mouseState, "Failed to Allocate MouseState", NULL);
-
-	result->mouseState->x = 0;
-	result->mouseState->y = 0;
-	result->mouseState->ldown = 0;
 
 	return result;
 }
@@ -146,6 +142,11 @@ SView* swCreateView(SView* parent, SRect* bounds) {
 	CHECK(result, "Failed to allocate SWin_Win32_View", NULL);
 
 	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_PLAIN;
+	
+	result->mouseDownCallback = NULL;
+	result->mouseUpCallback = NULL;
+	result->mouseMovedCallback = NULL;
+	result->mouseScrollCallback = NULL;
 
 	uint32_t viewID = __sWin_Win32_viewID;
 
@@ -210,7 +211,9 @@ SView* swCreateView(SView* parent, SRect* bounds) {
 
 	CHECK(result->hWnd, "CreateWindowEx() failed", NULL);
 
-	SetWindowLongPtr(result, GWLP_USERDATA, GetWindowLongPtr(_parent->hWnd, GWLP_USERDATA));
+	result->window = _parent->window;
+
+	SetWindowLongPtr(result->hWnd, GWLP_USERDATA, result);
 
 	result->hInstance = _parent->hInstance;
 
@@ -218,7 +221,52 @@ SView* swCreateView(SView* parent, SRect* bounds) {
 
 	CHECK_RECT(bounds);
 
+	result->mouseDownCallback = NULL;
+	result->mouseUpCallback = NULL;
+	result->mouseScrollCallback = NULL;
+	result->mouseMovedCallback = NULL;
+
 	return result;
+}
+
+SResult swSetMouseMovedCallback(SView* view, pfnSMouseMovedCallback callback) {
+	CHECK(view, "view was NULL", NULL);
+
+	SWin_Win32_View* _view = (SWin_Win32_View*)view;
+
+	CHECK_T(_view->type, TYPE_SWIN_WIN32_VIEW, "view was not an SView*", NULL);
+
+	_view->mouseMovedCallback = callback;
+}
+
+SResult swSetMouseDownCallback(SView* view, pfnSMouseDownCallback callback) {
+	CHECK(view, "view was NULL", NULL);
+
+	SWin_Win32_View* _view = (SWin_Win32_View*)view;
+
+	CHECK_T(_view->type, TYPE_SWIN_WIN32_VIEW, "view was not an SView*", NULL);
+
+	_view->mouseDownCallback = callback;
+}
+
+SResult swSetMouseUpCallback(SView* view, pfnSMouseUpCallback callback) {
+	CHECK(view, "view was NULL", NULL);
+
+	SWin_Win32_View* _view = (SWin_Win32_View*)view;
+
+	CHECK_T(_view->type, TYPE_SWIN_WIN32_VIEW, "view was not an SView*", NULL);
+
+	_view->mouseUpCallback = callback;
+}
+
+SResult swSetMouseScrollCallback(SView* view, pfnSMouseScrollCallback callback) {
+	CHECK(view, "view was NULL", NULL);
+
+	SWin_Win32_View* _view = (SWin_Win32_View*)view;
+
+	CHECK_T(_view->type, TYPE_SWIN_WIN32_VIEW, "view was not an SView*", NULL);
+
+	_view->mouseScrollCallback = callback;
 }
 
 void swSetViewBackgroundColor(SView* view, SColor color) {
@@ -244,6 +292,11 @@ SButton* swCreateButton(SView* parent, SRect* bounds, const char* title, void* c
 	CHECK(result, "Failed to allocate SWin_Win32_View", NULL);
 
 	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_BUTTON;
+
+	result->mouseDownCallback = NULL;
+	result->mouseUpCallback = NULL;
+	result->mouseMovedCallback = NULL;
+	result->mouseScrollCallback = NULL;
 
 	RECT viewBounds;
 	GetClientRect(_parent->hWnd, &viewBounds);
@@ -294,6 +347,11 @@ SLabel* swCreateLabel(SView* parent, SRect* bounds, const char* text) {
 
 	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_LABEL;
 
+	result->mouseDownCallback = NULL;
+	result->mouseUpCallback = NULL;
+	result->mouseMovedCallback = NULL;
+	result->mouseScrollCallback = NULL;
+
 	RECT viewBounds;
 	GetClientRect(parent, &viewBounds);
 
@@ -335,6 +393,11 @@ STextField* swCreateTextField(SView* parent, SRect* bounds, const char* text) {
 	CHECK(result, "Failed to allocate SWin_Win32_View", NULL);
 
 	result->type = TYPE_SWIN_WIN32_VIEW | VIEW_TYPE_TEXTFIELD;
+
+	result->mouseDownCallback = NULL;
+	result->mouseUpCallback = NULL;
+	result->mouseMovedCallback = NULL;
+	result->mouseScrollCallback = NULL;
 
 	RECT viewBounds;
 	GetClientRect(_parent->hWnd, &viewBounds);
@@ -384,27 +447,17 @@ char* swGetTextFromTextField(STextField* textField) {
 	return result;
 }
 
-SMouseState* swGetMouseState(SWindow* window) {
-	CHECK(window, "window was NULL", NULL);
-
-	SWin_Win32_Window* _window = (SWin_Win32_Window*)window;
-
-	CHECK_T(_window->type, TYPE_SWIN_WIN32_WINDOW, "window was not an SWindow*", NULL);
-	
-	return _window->mouseState;
-}
-
 inline LRESULT CALLBACK SWin_Win32_Thread_WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT ps;
 	HDC hdc;
 
-	SWin_Win32_RootPointer* root = GetWindowLongPtr(hWnd, GWLP_USERDATA);
+	SWin_Win32_View* _view = GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	
-	if (root == NULL) {
+	if (_view == NULL) {
 		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
-	SWin_Win32_Window* window = root->window;
+	SWin_Win32_Window* window = (SWin_Win32_Window*)_view->window;
 
 	if (message == WM_PAINT) {
 		hdc = BeginPaint(hWnd, &ps);
@@ -425,19 +478,38 @@ inline LRESULT CALLBACK SWin_Win32_Thread_WndProc(HWND hWnd, UINT message, WPARA
 	else if (message == WM_MOUSEMOVE) {
 		POINT pt;
 		GetCursorPos(&pt);
-		ScreenToClient(window->view.hWnd, &pt);
+		ScreenToClient(hWnd, &pt);
 
-		window->mouseState->x = (float)pt.x;
-		window->mouseState->y = (float)pt.y;
+		if (_view->mouseMovedCallback != NULL) {
+			_view->mouseMovedCallback(pt.x, pt.y);
+		}
 	}
 	else if (message == WM_LBUTTONDOWN) {
-		window->mouseState->ldown = 1;
+		POINT pt;
+		GetCursorPos(&pt);
+		ScreenToClient(hWnd, &pt);
+
+		if (_view->mouseDownCallback != NULL) {
+			_view->mouseDownCallback(pt.x, pt.y, SWIN_MOUSE_BUTTON_LEFT);
+		}
 	}
 	else if (message == WM_LBUTTONUP) {
-		window->mouseState->ldown = 0;
+		POINT pt;
+		GetCursorPos(&pt);
+		ScreenToClient(hWnd, &pt);
+
+		if (_view->mouseUpCallback != NULL) {
+			_view->mouseUpCallback(pt.x, pt.y, SWIN_MOUSE_BUTTON_LEFT);
+		}
 	}
 	else if (message == WM_MOUSEWHEEL) {
-		window->mouseState->scroll += GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA;
+		POINT pt;
+		GetCursorPos(&pt);
+		ScreenToClient(hWnd, &pt);
+
+		if (_view->mouseScrollCallback != NULL) {
+			_view->mouseScrollCallback(pt.x, pt.y, GET_WHEEL_DELTA_WPARAM(wParam) / WHEEL_DELTA);
+		}
 	}
 	else {
 		return DefWindowProc(hWnd, message, wParam, lParam);

@@ -27,6 +27,11 @@ typedef struct SWin_Win32_View {
 	SType type;
 	HWND hWnd;
 	HINSTANCE hInstance;
+	void* window;
+	pfnSMouseMovedCallback mouseMovedCallback;
+	pfnSMouseDownCallback mouseDownCallback;
+	pfnSMouseUpCallback mouseUpCallback;
+	pfnSMouseScrollCallback mouseScrollCallback;
 } SWin_Win32_View;
 
 typedef struct SWin_Win32_Window {
@@ -35,7 +40,6 @@ typedef struct SWin_Win32_Window {
 	const char* title;
 	MSG msg;
 	int close;
-	SMouseState* mouseState;
 } SWin_Win32_Window;
 
 typedef struct SWin_Win32_OpenGLContext {
